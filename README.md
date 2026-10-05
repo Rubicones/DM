@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Portfolio — rail
 
-## Getting Started
-
-First, run the development server:
+Scroll doesn't scroll the page: it moves a rider along a rail that wanders across a 2D world. Everything on screen is derived from one `progress ∈ [0, 1]` (= arc length). The rail passes through four visual worlds: brutalist → 3D (dark generative) → audio (gig-poster zine) → human-first (soft) → brutalist.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev      # http://localhost:3000  (?view=plain forces the flat page)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Where things live
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| File | What |
+|---|---|
+| `config/content.ts` | Content, chapter order, `railLayout`: **seed**, wander constraints, curve defaults, camera/look-ahead, `transitionZone`, `sceneMargin` |
+| `config/themes.ts` | `Theme` type + 4 themes (colors, type, surfaces, rail, rider, motion, decoration, readout, **sound**) |
+| `config/sound.ts` | Master volume, trigger rate limit, release timing, storage key |
+| `lib/theme/tokens.ts` | Theme → CSS variables (`flatten` / `blend` / `render`), `dashPeriod()` |
+| `lib/rail/geometry.ts` | **Planner** (seeded, constraint-checked base route) + **renderer** (orthogonal / filleted smooth / sine-along-normal) |
+| `lib/rail/engine.ts` | rAF loop: progress → rider, camera (framing + look-ahead), rail mask, stations, HUD, theme blending, frame events |
+| `lib/sound/` | `SoundSystem` (one global system, crossfade, limiter, rate limiting), `engines/*` (one per theme), `useRailSound` |
+| `lib/scene/sphere.ts`, `lib/scene/sphereChoreography.ts` | 3D chapter sphere fly-through + its keyframes |
+| `components/rail/RailDebug.tsx` | Dev-only overlay (HUD → "debug"): legs, envelopes, card boxes, clearance zones |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Rail planner
+- Change `railLayout.seed` for another (stable) layout. Constraints per breakpoint in `railLayout.desktop|mobile.wander`.
+- Each leg carries a curve **envelope** (sine amplitude + fillet cut), and clearances are checked with envelopes included, so rendered curves keep the guarantees.
+- In dev, a console warning `[rail] no clean fit for <station>` means the best-effort candidate was used — try another seed or loosen constraints.
 
-## Learn More
+## Sound
+- Engines: `ratchet` (brutalist), `bass-dots` (3D), `velocity-tone` (audio), `pencil` (human-first) — `lib/sound/engines/*.ts`, chosen by `theme.sound`.
+- Discrete engines fire once per rail dash/dot (period = `dashPeriod(theme)`), rate-limited by `soundConfig.minTriggerMs`.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Performance
+- **Perf overlay** (dev builds, or production built with `NEXT_PUBLIC_PERF=1`): add `?perf` to the URL or press **Alt+Shift+P**. Shows FPS, avg/worst frame time (last 120 frames), main-thread ms per subsystem (progress, camera, rail, stations, theme, 3d, sound), `renderer.info`, tier, chapter, rendered stations, visible rail chunks.
+- **Quality tiers**: `config/quality.ts` (presets + runtime budget). Detection in `lib/quality/detect.ts` (heuristics + lazy `detect-gpu` with self-hosted data in `public/detect-gpu`). Force with `?tier=high|medium|low|fallback`.
+- One ticker: `RailEngine.tick` (`lib/rail/engine.ts`). Geometry is planned time-sliced (`buildRailAsync`), sampled through an O(1) arc-length LUT (`lib/rail/lut.ts`), rendered as culled chunks (`components/rail/RailSvg.tsx`).

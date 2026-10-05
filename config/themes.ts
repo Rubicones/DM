@@ -1,140 +1,624 @@
 /**
  * THEMES
  * ------
- * Every visual decision that may change between chapters lives here as a token.
- * Tokens are pushed to CSS variables on the stage (see `themeToCssVars`), so a
- * chapter switch is just "write a new set of variables" — later this can be an
- * interpolation between two themes instead of a hard swap.
+ * A theme controls styling only — never layout. Every value here becomes a
+ * CSS variable (see lib/theme/tokens.ts). Components read variables, so the
+ * same card / header / nav / rider restyle when the variables change.
  *
- * To add a theme: add its id to `ThemeId`, add an object to `themes`,
- * reference it from a chapter in `config/content.ts`.
+ * - Stage chrome (background, texture, rail, rider, header, HUD, decorations)
+ *   gets a BLENDED set of variables that follows the rider's progress.
+ * - Each station card is scoped to its own chapter's theme (class `theme-<id>`),
+ *   so card sizes never change mid-scroll and positions stay stable.
+ *
+ * To add a theme: add the id to `THEME_IDS`, add an object to `themes`, load its
+ * fonts in app/layout.tsx, point a chapter at it in config/content.ts.
  */
 
-export type ThemeId = 'brutalist'; // later: | 'soft' | 'sketch'
+export const THEME_IDS = ['brutalist', 'dark3d', 'audio', 'human'] as const;
+export type ThemeId = (typeof THEME_IDS)[number];
 
-/** How the rail is generated for chapters using this theme (see lib/rail/geometry.ts). */
-export type PathGeometry = 'orthogonal' | 'curved' | 'hand-drawn';
+export type PathGeometry = 'orthogonal' | 'sine' | 'smooth';
+/** `dotted-matrix` draws the whole rail as a row of dots (traveled dots bigger/brighter). */
+export type RailRender = 'line' | 'dotted-matrix';
+/** 'pencil' = irregular sketchy dash. */
+export type StrokeStyle = 'solid' | 'dashed' | 'dotted' | 'glow' | 'pencil';
+export type RiderShape = 'square' | 'circle' | 'blob';
+export type RiderEffect = 'blink' | 'glow-pulse' | 'breathe' | 'jitter' | 'none';
+export type StationAnimation = 'glitch' | 'snap' | 'fade-glow' | 'soft-rise' | 'stamp';
+export type Texture = 'grid' | 'dots' | 'scanlines' | 'halftone' | 'none';
+export type Corner = 'square' | 'chamfer';
+export type Readout = 'coords' | 'frequency' | 'friendly';
+export type Decoration = 'none' | 'crosshairs' | 'zine' | 'soft-blobs';
+/** Rail sound engine (lib/sound/engines). */
+export type SoundEngineId = 'ratchet' | 'bass-dots' | 'velocity-tone' | 'pencil';
+export type TextCase = 'uppercase' | 'lowercase' | 'none';
 
-/** How stations enter when the rider approaches (see .station rules in app/globals.css). */
-export type StationAnimation = 'snap' | 'slide' | 'glitch' | 'soft';
+export const TEXTURES = ['grid', 'dots', 'scanlines', 'halftone'] as const;
+
+export interface Shadow {
+  x: number;
+  y: number;
+  blur: number;
+  spread: number;
+  color: string;
+}
 
 export interface Theme {
   id: ThemeId;
   label: string;
   colors: {
-    background: string;
-    surface: string;
-    foreground: string;
+    bg: string;
+    fg: string;
     muted: string;
-    grid: string;
     accent1: string;
     accent2: string;
     accent3: string;
-    rider: string;
+    /** Accent used for text — must pass AA on bg/cardBg. */
+    accentText: string;
+    onAccent1: string;
+    onAccent2: string;
+    onAccent3: string;
+    cardBg: string;
+    border: string;
+    /** Thin rules: header/HUD lines, list dividers. */
+    rule: string;
+    /** Background texture ink. */
+    texture: string;
+    /** Vertical frame lines of the stage. */
+    frame: string;
+    /** Chapter chips (rail dividers, plain view headings). */
+    chipBg: string;
+    chipFg: string;
+    /** Numbered index chips in lists. */
+    indexBg: string;
+    indexFg: string;
+    tagBorder: string;
+    tagBg: string;
+    tagFg: string;
+    tagFilledBg: string;
+    tagFilledFg: string;
+    tagGlow: string;
+    btnBg: string;
+    btnFg: string;
+    navActiveBg: string;
+    navActiveFg: string;
+    navActiveBorder: string;
   };
-  fonts: { display: string; body: string; mono: string };
-  line: {
+  type: {
+    display: string;
+    body: string;
+    mono: string;
+    displayWeight: number;
+    /** em */
+    displayTracking: number;
+    displayVariation: string;
+    bodyWeight: number;
+    /** px */
+    bodySize: number;
+    bodyLeading: number;
+    monoWeight: number;
+    labelCase: TextCase;
+    /** em */
+    labelTracking: number;
+  };
+  surface: {
+    borderWidth: number;
+    borderStyle: 'solid' | 'dashed' | 'dotted';
+    radius: number;
+    corner: Corner;
+    chamfer: number;
+    shadow: Shadow;
+    /** Inner glow (survives the chamfer clip-path). */
+    insetGlow: { blur: number; color: string };
+    shadowSmall: Shadow;
+    backdropBlur: number;
+    texture: Texture;
+    ruleWidth: number;
+    tagRadius: number;
+    tagBorderWidth: number;
+    tagGlow: number;
+    btnRadius: number;
+    /** CSS length for card padding. */
+    cardPadding: string;
+    /** Max random rotation of cards / tags (deg) — sticker look. Transform only, layout unchanged. */
+    tilt: number;
+    tagTilt: number;
+    /** Hand-drawn outlines: card border is redrawn through an SVG displacement filter. */
+    sketch: boolean;
+  };
+  rail: {
+    geometry: PathGeometry;
+    render: RailRender;
     width: number;
     color: string;
     aheadWidth: number;
     aheadColor: string;
-    /** SVG stroke-dasharray for the part of the rail not yet travelled. */
-    aheadDash: string;
+    doneStyle: StrokeStyle;
+    aheadStyle: StrokeStyle;
     cap: 'butt' | 'round' | 'square';
     join: 'miter' | 'round' | 'bevel';
+    /** Extra halo width each side (px) when doneStyle is 'glow'. */
+    glow: number;
+    glowOpacity: number;
+    /** Gap between dots for dotted styles. */
+    dotSpacing: number;
+    /** Corner markers + coordinate labels (orthogonal chapters). */
+    nodeOpacity: number;
+    /** Marker look: geometry wobble + a second offset stroke. */
+    sketch: boolean;
   };
-  border: { width: number; style: 'solid' | 'dashed' | 'dotted'; color: string };
-  radius: number;
-  shadow: string;
-  shadowSmall: string;
-  station: {
-    animation: StationAnimation;
+  rider: {
+    shape: RiderShape;
+    size: number;
+    fill: string;
+    outline: string;
+    outlineWidth: number;
+    shadow: Shadow;
+    glow: Shadow;
+    ringColor: string;
+    ringFill: string;
+    ringSize: number;
+    ringWidth: number;
+    effect: RiderEffect;
+    labelCase: TextCase;
+    labelSize: number;
+    labelColor: string;
+  };
+  motion: {
+    stationAnimation: StationAnimation;
     durationMs: number;
     easing: string;
     passedOpacity: number;
   };
-  geometry: PathGeometry;
-  grid: { size: number; lineWidth: number };
+  decoration: Decoration;
+  readout: Readout;
+  sound: SoundEngineId;
 }
 
+const none: Shadow = { x: 0, y: 0, blur: 0, spread: 0, color: 'rgba(0,0,0,0)' };
+
 export const themes: Record<ThemeId, Theme> = {
+  // ───────────────────────────────────────────── 1. General / brutalist
   brutalist: {
     id: 'brutalist',
     label: 'Brutalist',
     colors: {
-      background: '#F1F0EC',
-      surface: '#F1F0EC',
-      foreground: '#0A0A0A',
+      bg: '#F1F0EC',
+      fg: '#0A0A0A',
       muted: '#5C5C57',
-      grid: 'rgba(10, 10, 10, 0.075)',
       accent1: '#E8FF00',
       accent2: '#2B2BFF',
       accent3: '#FF3B00',
-      rider: '#FF3B00',
+      accentText: '#2B2BFF',
+      onAccent1: '#0A0A0A',
+      onAccent2: '#F1F0EC',
+      onAccent3: '#0A0A0A',
+      cardBg: '#F1F0EC',
+      border: '#0A0A0A',
+      rule: '#0A0A0A',
+      texture: 'rgba(10, 10, 10, 0.075)',
+      frame: 'rgba(10, 10, 10, 0.6)',
+      chipBg: '#0A0A0A',
+      chipFg: '#E8FF00',
+      indexBg: '#E8FF00',
+      indexFg: '#0A0A0A',
+      tagBorder: '#0A0A0A',
+      tagBg: 'rgba(0,0,0,0)',
+      tagFg: '#0A0A0A',
+      tagFilledBg: '#0A0A0A',
+      tagFilledFg: '#F1F0EC',
+      tagGlow: 'rgba(0,0,0,0)',
+      btnBg: '#E8FF00',
+      btnFg: '#0A0A0A',
+      navActiveBg: '#E8FF00',
+      navActiveFg: '#0A0A0A',
+      navActiveBorder: '#0A0A0A',
     },
-    fonts: {
+    type: {
       display: 'var(--font-archivo-black), "Arial Black", Impact, sans-serif',
       body: 'var(--font-space-grotesk), system-ui, sans-serif',
       mono: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+      displayWeight: 400,
+      displayTracking: -0.01,
+      displayVariation: 'normal',
+      bodyWeight: 400,
+      bodySize: 15,
+      bodyLeading: 1.6,
+      monoWeight: 400,
+      labelCase: 'uppercase',
+      labelTracking: 0.12,
     },
-    line: {
+    surface: {
+      borderWidth: 3,
+      borderStyle: 'solid',
+      radius: 0,
+      corner: 'square',
+      chamfer: 0,
+      shadow: { x: 8, y: 8, blur: 0, spread: 0, color: '#0A0A0A' },
+      insetGlow: { blur: 0, color: 'rgba(0,0,0,0)' },
+      shadowSmall: { x: 4, y: 4, blur: 0, spread: 0, color: '#0A0A0A' },
+      backdropBlur: 0,
+      texture: 'grid',
+      ruleWidth: 2,
+      tagRadius: 0,
+      tagBorderWidth: 2,
+      tagGlow: 0,
+      btnRadius: 0,
+      cardPadding: 'clamp(20px, 2.4vw, 28px)',
+      tilt: 0,
+      tagTilt: 0,
+      sketch: false,
+    },
+    rail: {
+      geometry: 'orthogonal',
+      render: 'line',
       width: 8,
       color: '#0A0A0A',
       aheadWidth: 6,
       aheadColor: '#B4B3AE',
-      aheadDash: '16 10',
+      doneStyle: 'solid',
+      aheadStyle: 'dashed',
       cap: 'butt',
       join: 'miter',
+      glow: 0,
+      glowOpacity: 0,
+      dotSpacing: 14,
+      nodeOpacity: 1,
+      sketch: false,
     },
-    border: { width: 3, style: 'solid', color: '#0A0A0A' },
-    radius: 0,
-    shadow: '8px 8px 0 #0A0A0A',
-    shadowSmall: '4px 4px 0 #0A0A0A',
-    station: { animation: 'glitch', durationMs: 240, easing: 'steps(4, end)', passedOpacity: 0.4 },
-    geometry: 'orthogonal',
-    grid: { size: 44, lineWidth: 1 },
+    rider: {
+      shape: 'square',
+      size: 22,
+      fill: '#FF3B00',
+      outline: '#0A0A0A',
+      outlineWidth: 3,
+      shadow: { x: 3, y: 3, blur: 0, spread: 0, color: '#0A0A0A' },
+      glow: none,
+      ringColor: '#B4B3AE',
+      ringFill: 'rgba(241, 240, 236, 0.7)',
+      ringSize: 46,
+      ringWidth: 2,
+      effect: 'blink',
+      labelCase: 'uppercase',
+      labelSize: 9,
+      labelColor: '#0A0A0A',
+    },
+    motion: { stationAnimation: 'glitch', durationMs: 240, easing: 'steps(4, end)', passedOpacity: 0.4 },
+    decoration: 'none',
+    readout: 'coords',
+    sound: 'ratchet',
+  },
+
+  // ───────────────────────────────────────────── 2. 3D / dark generative brutalism
+  dark3d: {
+    id: 'dark3d',
+    label: 'Dark generative',
+    colors: {
+      bg: '#161616',
+      fg: '#EDEDED',
+      muted: '#8E8E8E',
+      accent1: '#EDEDED',
+      accent2: '#9A9A9A',
+      accent3: '#5A5A5A',
+      accentText: '#EDEDED',
+      onAccent1: '#161616',
+      onAccent2: '#161616',
+      onAccent3: '#EDEDED',
+      cardBg: 'rgba(22, 22, 22, 0.92)',
+      border: 'rgba(237, 237, 237, 0.45)',
+      rule: 'rgba(237, 237, 237, 0.22)',
+      texture: 'rgba(237, 237, 237, 0.05)',
+      frame: 'rgba(237, 237, 237, 0.14)',
+      chipBg: '#EDEDED',
+      chipFg: '#161616',
+      indexBg: 'rgba(0,0,0,0)',
+      indexFg: '#EDEDED',
+      tagBorder: 'rgba(237, 237, 237, 0.35)',
+      tagBg: 'rgba(0,0,0,0)',
+      tagFg: '#CFCFCF',
+      tagFilledBg: '#EDEDED',
+      tagFilledFg: '#161616',
+      tagGlow: 'rgba(0,0,0,0)',
+      btnBg: 'rgba(0,0,0,0)',
+      btnFg: '#EDEDED',
+      navActiveBg: 'rgba(0,0,0,0)',
+      navActiveFg: '#EDEDED',
+      navActiveBorder: 'rgba(237, 237, 237, 0.7)',
+    },
+    type: {
+      display: 'var(--font-inter-tight), "Helvetica Neue", Arial, sans-serif',
+      body: 'var(--font-inter-tight), "Helvetica Neue", Arial, sans-serif',
+      mono: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+      displayWeight: 700,
+      displayTracking: -0.035,
+      displayVariation: 'normal',
+      bodyWeight: 400,
+      bodySize: 14,
+      bodyLeading: 1.6,
+      monoWeight: 400,
+      labelCase: 'lowercase',
+      labelTracking: 0.02,
+    },
+    surface: {
+      borderWidth: 1,
+      borderStyle: 'solid',
+      radius: 0,
+      corner: 'square',
+      chamfer: 0,
+      shadow: { x: 0, y: 0, blur: 0, spread: 0, color: 'rgba(0,0,0,0)' },
+      insetGlow: { blur: 0, color: 'rgba(0,0,0,0)' },
+      shadowSmall: { x: 0, y: 0, blur: 0, spread: 0, color: 'rgba(0,0,0,0)' },
+      backdropBlur: 0,
+      texture: 'none',
+      ruleWidth: 1,
+      tagRadius: 0,
+      tagBorderWidth: 1,
+      tagGlow: 0,
+      btnRadius: 0,
+      cardPadding: 'clamp(20px, 2.4vw, 28px)',
+      tilt: 0,
+      tagTilt: 0,
+      sketch: false,
+    },
+    rail: {
+      geometry: 'orthogonal',
+      render: 'dotted-matrix',
+      width: 6,
+      color: '#F4F4F4',
+      aheadWidth: 3,
+      aheadColor: 'rgba(244, 244, 244, 0.28)',
+      doneStyle: 'dotted',
+      aheadStyle: 'dotted',
+      cap: 'round',
+      join: 'round',
+      glow: 0,
+      glowOpacity: 0,
+      dotSpacing: 14,
+      nodeOpacity: 0.45,
+      sketch: false,
+    },
+    rider: {
+      shape: 'square',
+      size: 14,
+      fill: 'rgba(0,0,0,0)',
+      outline: '#F4F4F4',
+      outlineWidth: 1.5,
+      shadow: none,
+      glow: none,
+      ringColor: 'rgba(244, 244, 244, 0.5)',
+      ringFill: 'rgba(0,0,0,0)',
+      ringSize: 34,
+      ringWidth: 1,
+      effect: 'none',
+      labelCase: 'lowercase',
+      labelSize: 10,
+      labelColor: '#BDBDBD',
+    },
+    motion: { stationAnimation: 'snap', durationMs: 220, easing: 'steps(3, end)', passedOpacity: 0.35 },
+    decoration: 'crosshairs',
+    readout: 'coords',
+    sound: 'bass-dots',
+  },
+
+  // ───────────────────────────────────────────── 3. Audio / rock'n'roll zine
+  audio: {
+    id: 'audio',
+    label: 'Gig poster',
+    colors: {
+      bg: '#F5ECD7',
+      fg: '#15120F',
+      muted: '#4B4339',
+      accent1: '#FF2E88',
+      accent2: '#1F4BFF',
+      accent3: '#FFD21F',
+      accentText: '#C8104F',
+      onAccent1: '#15120F',
+      onAccent2: '#F5ECD7',
+      onAccent3: '#15120F',
+      cardBg: '#FFFAEE',
+      border: '#15120F',
+      rule: '#15120F',
+      texture: 'rgba(21, 18, 15, 0.16)',
+      frame: 'rgba(21, 18, 15, 0.25)',
+      chipBg: '#15120F',
+      chipFg: '#FFD21F',
+      indexBg: '#FFD21F',
+      indexFg: '#15120F',
+      tagBorder: '#15120F',
+      tagBg: '#FFFAEE',
+      tagFg: '#15120F',
+      tagFilledBg: '#FF2E88',
+      tagFilledFg: '#15120F',
+      tagGlow: 'rgba(0,0,0,0)',
+      btnBg: '#FFD21F',
+      btnFg: '#15120F',
+      navActiveBg: '#FF2E88',
+      navActiveFg: '#15120F',
+      navActiveBorder: '#15120F',
+    },
+    type: {
+      display: 'var(--font-permanent-marker), "Marker Felt", "Comic Sans MS", cursive',
+      body: 'var(--font-space-grotesk), system-ui, sans-serif',
+      mono: 'var(--font-special-elite), "Courier New", monospace',
+      displayWeight: 400,
+      displayTracking: 0,
+      displayVariation: 'normal',
+      bodyWeight: 400,
+      bodySize: 15,
+      bodyLeading: 1.6,
+      monoWeight: 400,
+      labelCase: 'uppercase',
+      labelTracking: 0.06,
+    },
+    surface: {
+      borderWidth: 2.5,
+      borderStyle: 'solid',
+      radius: 3,
+      corner: 'square',
+      chamfer: 0,
+      shadow: { x: 6, y: 6, blur: 0, spread: 0, color: '#15120F' },
+      insetGlow: { blur: 0, color: 'rgba(0,0,0,0)' },
+      shadowSmall: { x: 3, y: 3, blur: 0, spread: 0, color: '#15120F' },
+      backdropBlur: 0,
+      texture: 'halftone',
+      ruleWidth: 2,
+      tagRadius: 2,
+      tagBorderWidth: 2,
+      tagGlow: 0,
+      btnRadius: 2,
+      cardPadding: 'clamp(20px, 2.4vw, 28px)',
+      tilt: 1.6,
+      tagTilt: 2,
+      sketch: true,
+    },
+    rail: {
+      geometry: 'sine',
+      render: 'line',
+      width: 6,
+      color: '#FF2E88',
+      aheadWidth: 2,
+      aheadColor: '#8E877C',
+      doneStyle: 'solid',
+      aheadStyle: 'pencil',
+      cap: 'round',
+      join: 'round',
+      glow: 0,
+      glowOpacity: 0,
+      dotSpacing: 10,
+      nodeOpacity: 0,
+      sketch: true,
+    },
+    rider: {
+      shape: 'blob',
+      size: 24,
+      fill: '#FFD21F',
+      outline: '#15120F',
+      outlineWidth: 2.5,
+      shadow: { x: 3, y: 3, blur: 0, spread: 0, color: '#15120F' },
+      glow: none,
+      ringColor: 'rgba(0,0,0,0)',
+      ringFill: 'rgba(255, 46, 136, 0.18)',
+      ringSize: 44,
+      ringWidth: 0,
+      effect: 'jitter',
+      labelCase: 'uppercase',
+      labelSize: 11,
+      labelColor: '#15120F',
+    },
+    motion: { stationAnimation: 'stamp', durationMs: 360, easing: 'steps(3, end)', passedOpacity: 0.5 },
+    decoration: 'zine',
+    readout: 'frequency',
+    sound: 'velocity-tone',
+  },
+
+  // ───────────────────────────────────────────── 4. Human-first / soft
+  human: {
+    id: 'human',
+    label: 'Human-first',
+    colors: {
+      bg: '#FBF6EE',
+      fg: '#2F2A3B',
+      muted: '#5E586D',
+      accent1: '#F6C9B4',
+      accent2: '#CBBEF0',
+      accent3: '#B9D8C2',
+      accentText: '#5B4A9A',
+      onAccent1: '#2F2A3B',
+      onAccent2: '#2F2A3B',
+      onAccent3: '#2F2A3B',
+      cardBg: '#FFFDF9',
+      border: '#EDE4F4',
+      rule: '#E9E1D6',
+      texture: 'rgba(91, 74, 154, 0.07)',
+      frame: 'rgba(0,0,0,0)',
+      chipBg: '#E6F0E8',
+      chipFg: '#2F4A39',
+      indexBg: '#EFE9FB',
+      indexFg: '#4A3D80',
+      tagBorder: 'rgba(0,0,0,0)',
+      tagBg: '#F1ECFA',
+      tagFg: '#3F3566',
+      tagFilledBg: '#E3F0E6',
+      tagFilledFg: '#2F4A39',
+      tagGlow: 'rgba(0,0,0,0)',
+      btnBg: '#F6C9B4',
+      btnFg: '#2F2A3B',
+      navActiveBg: '#EFE9FB',
+      navActiveFg: '#2F2A3B',
+      navActiveBorder: 'rgba(0,0,0,0)',
+    },
+    type: {
+      display: 'var(--font-fraunces), Georgia, serif',
+      body: 'var(--font-atkinson), "Nunito", system-ui, sans-serif',
+      mono: 'var(--font-atkinson), "Nunito", system-ui, sans-serif',
+      displayWeight: 500,
+      displayTracking: -0.01,
+      displayVariation: '"SOFT" 100, "WONK" 0',
+      bodyWeight: 400,
+      bodySize: 17,
+      bodyLeading: 1.7,
+      monoWeight: 400,
+      labelCase: 'none',
+      labelTracking: 0,
+    },
+    surface: {
+      borderWidth: 1,
+      borderStyle: 'solid',
+      radius: 24,
+      corner: 'square',
+      chamfer: 0,
+      shadow: { x: 0, y: 14, blur: 40, spread: -10, color: 'rgba(84, 64, 130, 0.16)' },
+      insetGlow: { blur: 0, color: 'rgba(0,0,0,0)' },
+      shadowSmall: { x: 0, y: 6, blur: 18, spread: -6, color: 'rgba(84, 64, 130, 0.22)' },
+      backdropBlur: 0,
+      texture: 'dots',
+      ruleWidth: 1,
+      tagRadius: 999,
+      tagBorderWidth: 0,
+      tagGlow: 0,
+      btnRadius: 999,
+      cardPadding: 'clamp(24px, 3vw, 36px)',
+      tilt: 0,
+      tagTilt: 0,
+      sketch: false,
+    },
+    rail: {
+      geometry: 'smooth',
+      render: 'line',
+      width: 7,
+      color: '#A9CBB3',
+      aheadWidth: 7,
+      aheadColor: '#E3EEE5',
+      doneStyle: 'solid',
+      aheadStyle: 'solid',
+      cap: 'round',
+      join: 'round',
+      glow: 0,
+      glowOpacity: 0,
+      dotSpacing: 14,
+      nodeOpacity: 0,
+      sketch: false,
+    },
+    rider: {
+      shape: 'blob',
+      size: 26,
+      fill: '#F4B79F',
+      outline: 'rgba(255,255,255,0.9)',
+      outlineWidth: 3,
+      shadow: { x: 0, y: 6, blur: 16, spread: 0, color: 'rgba(84, 64, 130, 0.22)' },
+      glow: none,
+      ringColor: 'rgba(0,0,0,0)',
+      ringFill: 'rgba(244, 183, 159, 0.22)',
+      ringSize: 56,
+      ringWidth: 0,
+      effect: 'breathe',
+      labelCase: 'none',
+      labelSize: 12,
+      labelColor: '#4A4458',
+    },
+    motion: { stationAnimation: 'soft-rise', durationMs: 700, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', passedOpacity: 0.55 },
+    decoration: 'soft-blobs',
+    readout: 'friendly',
+    sound: 'pencil',
   },
 };
-
-export function themeToCssVars(t: Theme): Record<string, string> {
-  return {
-    '--t-bg': t.colors.background,
-    '--t-surface': t.colors.surface,
-    '--t-fg': t.colors.foreground,
-    '--t-muted': t.colors.muted,
-    '--t-grid': t.colors.grid,
-    '--t-accent-1': t.colors.accent1,
-    '--t-accent-2': t.colors.accent2,
-    '--t-accent-3': t.colors.accent3,
-    '--t-rider': t.colors.rider,
-    '--t-font-display': t.fonts.display,
-    '--t-font-body': t.fonts.body,
-    '--t-font-mono': t.fonts.mono,
-    '--t-line-width': `${t.line.width}px`,
-    '--t-line-color': t.line.color,
-    '--t-line-ahead-width': `${t.line.aheadWidth}px`,
-    '--t-line-ahead-color': t.line.aheadColor,
-    '--t-line-ahead-dash': t.line.aheadDash,
-    '--t-line-cap': t.line.cap,
-    '--t-line-join': t.line.join,
-    '--t-border-width': `${t.border.width}px`,
-    '--t-border-style': t.border.style,
-    '--t-border-color': t.border.color,
-    '--t-radius': `${t.radius}px`,
-    '--t-shadow': t.shadow,
-    '--t-shadow-sm': t.shadowSmall,
-    '--t-station-duration': `${t.station.durationMs}ms`,
-    '--t-station-easing': t.station.easing,
-    '--t-station-passed-opacity': String(t.station.passedOpacity),
-    '--t-grid-size': `${t.grid.size}px`,
-    '--t-grid-line': `${t.grid.lineWidth}px`,
-  };
-}
-
-/** Imperatively apply a theme to an element (used by the engine on chapter change). */
-export function applyTheme(el: HTMLElement, t: Theme): void {
-  const vars = themeToCssVars(t);
-  for (const key in vars) el.style.setProperty(key, vars[key]);
-  el.dataset.theme = t.id;
-  el.dataset.anim = t.station.animation;
-}

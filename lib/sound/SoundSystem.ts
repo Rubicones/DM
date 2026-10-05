@@ -1,0 +1,199 @@
+/**
+ * ONE global rail-sound system (one AudioContext for the whole site).
+ *
+ *   RailEngine frame (len, velocity) ──▶ engines of the themes within ±1 chapter
+ *        • discrete: one onDash() per crossed dash/dot (period from the theme's
+ *          rail pattern, measured on the same arc length as the LUT),
+ *          rate-limited — skipped, never queued; scheduled with a look-ahead
+ *        • continuous: onMove(distance, velocity) → setTargetAtTime params
+ *   engine gains = theme blend weights (same crossfade as the visuals)
+ *   all engines → master gain → compressor/limiter → speakers
+ *
+ * Buffers are pre-rendered once on enable. Engines further than ±1 chapter
+ * are disposed (oscillators/noise loops stopped). The context is suspended
+ * when the tab is hidden or the rider has been still for a few seconds.
+ */
+import { chapters } from '@/config/content';
+import { soundConfig } from '@/config/sound';
+import { themes, type SoundEngineId, type ThemeId } from '@/config/themes';
+import type { FrameState, RailEngine } from '@/lib/rail/engine';
+import { dashPeriod } from '@/lib/theme/tokens';
+import { renderBank, type BufferBank } from './bank';
+import { bassDots } from './engines/bassDots';
+import { pencil } from './engines/pencil';
+import { ratchet } from './engines/ratchet';
+import { velocityTone } from './engines/velocityTone';
+import type { ChapterSoundEngine, EngineFactory } from './types';
+
+const FACTORIES: Record<SoundEngineId, EngineFactory> = {
+  ratchet,
+  'bass-dots': bassDots,
+  'velocity-tone': velocityTone,
+  pencil,
+};
+
+/** Suspend the AudioContext after this long without movement (ms). */
+const SUSPEND_AFTER_MS = 3500;
+
+interface Slot {
+  id: ThemeId;
+  engine: ChapterSoundEngine;
+  period: number;
+  lastIndex: number;
+  lastTrigger: number;
+  lastWeight: number;
+}
+
+export class SoundSystem {
+  private ctx: AudioContext | null = null;
+  private master: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
+  private bank: BufferBank | null = null;
+  private rng: () => number = Math.random;
+  /** Active engines (themes of chapters current−1 … current+1). Array → no per-frame allocation. */
+  private slots: Slot[] = [];
+  private lastChapter = -2;
+  private unsubscribe: (() => void) | null = null;
+  private suspendTimer = 0;
+  private lastMoveAt = 0;
+
+  constructor(private readonly rail: RailEngine) {}
+
+  get running() {
+    return !!this.ctx;
+  }
+
+  /**
+   * Must originate from a user gesture. Pass a context created synchronously
+   * inside the gesture handler (Safari only unlocks audio there); the module
+   * itself is a lazy chunk that may arrive a moment later.
+   */
+  async start(existing?: AudioContext) {
+    if (this.ctx) {
+      if (existing && existing !== this.ctx) void existing.close(); // duplicate unlock from a double gesture
+      await this.ctx.resume();
+      return;
+    }
+    const ctx = existing ?? new AudioContext({ latencyHint: 'interactive' });
+    const master = ctx.createGain();
+    master.gain.value = soundConfig.masterVolume;
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -16;
+    limiter.knee.value = 6;
+    limiter.ratio.value = 10;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.12;
+    master.connect(limiter).connect(ctx.destination);
+
+    let seed = 0x9e3779b9;
+    this.rng = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    this.bank = renderBank(ctx, this.rng);
+    this.ctx = ctx;
+    this.master = master;
+    this.limiter = limiter;
+    this.lastChapter = -2;
+    await ctx.resume();
+    document.addEventListener('visibilitychange', this.onVisibility);
+    this.unsubscribe = this.rail.addFrameListener(this.onFrame);
+  }
+
+  async stop() {
+    this.unsubscribe?.();
+    this.unsubscribe = null;
+    document.removeEventListener('visibilitychange', this.onVisibility);
+    window.clearTimeout(this.suspendTimer);
+    const ctx = this.ctx;
+    if (!ctx) return;
+    this.master?.gain.setTargetAtTime(0, ctx.currentTime, 0.03);
+    await new Promise((r) => setTimeout(r, 120));
+    for (const s of this.slots) s.engine.dispose();
+    this.slots = [];
+    this.master?.disconnect();
+    this.limiter?.disconnect();
+    this.ctx = this.master = this.limiter = null;
+    this.bank = null;
+    await ctx.close();
+  }
+
+  /** One pending timer at most (no per-frame timer churn). */
+  private checkIdle = () => {
+    const idle = performance.now() - this.lastMoveAt;
+    if (idle >= SUSPEND_AFTER_MS) {
+      this.suspendTimer = 0;
+      void this.ctx?.suspend();
+    } else {
+      this.suspendTimer = window.setTimeout(this.checkIdle, SUSPEND_AFTER_MS - idle + 20);
+    }
+  };
+
+  private onVisibility = () => {
+    if (document.hidden) void this.ctx?.suspend();
+  };
+
+  /** Keep only engines for themes within ±1 chapter. Runs on chapter change only. */
+  private syncEngines(chapterIndex: number) {
+    const ctx = this.ctx;
+    const bank = this.bank;
+    const master = this.master;
+    if (!ctx || !bank || !master) return;
+    const want = new Set<ThemeId>();
+    for (let i = chapterIndex - 1; i <= chapterIndex + 1; i++) if (chapters[i]) want.add(chapters[i].theme);
+    this.slots = this.slots.filter((s) => {
+      if (want.has(s.id)) return true;
+      s.engine.dispose();
+      return false;
+    });
+    want.forEach((id) => {
+      if (this.slots.some((s) => s.id === id)) return;
+      this.slots.push({
+        id,
+        engine: FACTORIES[themes[id].sound]({ ctx, out: master, rng: this.rng, bank }),
+        period: dashPeriod(themes[id]),
+        lastIndex: NaN,
+        lastTrigger: -Infinity,
+        lastWeight: -1,
+      });
+    });
+  }
+
+  private onFrame = (f: FrameState) => {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const speed = Math.abs(f.velocity);
+    if (speed > 0) {
+      this.lastMoveAt = performance.now();
+      if (ctx.state === 'suspended' && !document.hidden) void ctx.resume();
+      if (!this.suspendTimer) this.suspendTimer = window.setTimeout(this.checkIdle, SUSPEND_AFTER_MS);
+    }
+    if (ctx.state !== 'running') return;
+    if (f.chapterIndex !== this.lastChapter) {
+      this.lastChapter = f.chapterIndex;
+      this.syncEngines(f.chapterIndex);
+    }
+
+    const now = performance.now();
+    const distance = speed * f.dt;
+    const cap = 1000 / soundConfig.minTriggerMs;
+    for (let i = 0; i < this.slots.length; i++) {
+      const s = this.slots[i];
+      const w = this.rail.themeWeight(s.id);
+      if (s.lastWeight !== w) {
+        s.lastWeight = w;
+        s.engine.setGain(w);
+      }
+      const idx = s.period > 0 ? Math.floor(f.len / s.period) : 0;
+      const prev = s.lastIndex;
+      s.lastIndex = idx;
+      if (w < 0.001) continue;
+      if (s.period > 0 && prev === prev && idx !== prev && now - s.lastTrigger >= soundConfig.minTriggerMs) {
+        const crossingsPerSec = Math.abs(idx - prev) / Math.max(f.dt, 1e-3);
+        s.engine.onDash(idx, crossingsPerSec > cap ? soundConfig.fastScrollGain : 1);
+        s.lastTrigger = now;
+      }
+      s.engine.onMove(distance, speed);
+    }
+  };
+}
