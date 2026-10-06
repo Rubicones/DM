@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    path { stroke: #0A0A0A; }
+    @media (prefers-color-scheme: dark) { path { stroke: #F1F0EC; } }
+  </style>
+  <!-- the header's heavy asterisk (✱): three rounded bars through the centre -->
+  <path d="M16 4 V28 M5.6 10 L26.4 22 M5.6 22 L26.4 10" fill="none" stroke-width="6.4" stroke-linecap="round" />
+</svg>

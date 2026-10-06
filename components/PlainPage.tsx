@@ -53,6 +53,7 @@ export function PlainPage({ onToggleView }: { onToggleView: () => void }) {
                     .map((e) => (
                       <article
                         key={e.station.id}
+                        id={e.station.id}
                         aria-labelledby={`${e.station.id}-title`}
                         className={e.station.kind === 'intro' ? '' : 'card'}
                         style={{ '--seed': tiltSeed(e.number) } as React.CSSProperties}

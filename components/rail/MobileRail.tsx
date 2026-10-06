@@ -18,6 +18,7 @@ interface Props {
   onToggleView: () => void;
   /** "Start journey" button for the intro card. */
   introAction: ReactNode;
+  onGoTo: (id: string) => void;
 }
 
 /**
@@ -29,7 +30,7 @@ interface Props {
  * (keyboard / screen readers as on desktop); content taller than the space
  * above the rider is clipped and opens in a "more" bottom sheet.
  */
-export function MobileRail({ engine, geo, sound, onToggleView, introAction }: Props) {
+export function MobileRail({ engine, geo, sound, onToggleView, introAction, onGoTo }: Props) {
   const [sheet, setSheet] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
   const zoneRef = useRef<HTMLDivElement>(null);
@@ -174,6 +175,7 @@ export function MobileRail({ engine, geo, sound, onToggleView, introAction }: Pr
                               number={e.number}
                               local={e.local}
                               introAction={intro ? introAction : undefined}
+                              onGoTo={onGoTo}
                             />
                           </div>
                         </div>
@@ -221,6 +223,10 @@ export function MobileRail({ engine, geo, sound, onToggleView, introAction }: Pr
                 number={sheetEntry.number}
                 local={sheetEntry.local}
                 idSuffix="-sheet"
+                onGoTo={(id) => {
+                  setSheet(null);
+                  requestAnimationFrame(() => onGoTo(id));
+                }}
               />
             </div>
           </div>
