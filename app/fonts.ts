@@ -10,11 +10,11 @@ import {
   Atkinson_Hyperlegible,
   Fraunces,
   Inter_Tight,
+  IBM_Plex_Mono,
+  IBM_Plex_Sans,
   JetBrains_Mono,
-  Permanent_Marker,
-  DM_Sans,
+  Michroma,
   Space_Grotesk,
-  Special_Elite,
 } from 'next/font/google';
 
 // brutalist — preloaded
@@ -23,12 +23,12 @@ export const grotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-spa
 export const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono', display: 'swap' });
 // dark3d
 export const interTight = Inter_Tight({ subsets: ['latin'], variable: '--font-inter-tight', display: 'swap', preload: false });
-// audio (gig poster)
-export const marker = Permanent_Marker({ weight: '400', subsets: ['latin'], variable: '--font-permanent-marker', display: 'swap', preload: false });
-export const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans', display: 'swap', preload: false });
-export const typewriter = Special_Elite({ weight: '400', subsets: ['latin'], variable: '--font-special-elite', display: 'swap', preload: false });
+// audio (FM synth): wide instrument-panel display, calm plex body + panel mono
+export const michroma = Michroma({ weight: '400', subsets: ['latin'], variable: '--font-michroma', display: 'swap', preload: false });
+export const plexSans = IBM_Plex_Sans({ weight: ['400', '500', '600'], subsets: ['latin'], variable: '--font-plex-sans', display: 'swap', preload: false });
+export const plexMono = IBM_Plex_Mono({ weight: ['400', '500'], subsets: ['latin'], variable: '--font-plex-mono', display: 'swap', preload: false });
 // human-first
 export const atkinson = Atkinson_Hyperlegible({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-atkinson', display: 'swap', preload: false });
 export const fraunces = Fraunces({ subsets: ['latin'], axes: ['SOFT', 'WONK', 'opsz'], variable: '--font-fraunces', display: 'swap', preload: false });
 
-export const fontVariables = [archivo, grotesk, mono, interTight, marker, dmSans, typewriter, atkinson, fraunces].map((f) => f.variable).join(' ');
+export const fontVariables = [archivo, grotesk, mono, interTight, michroma, plexSans, plexMono, atkinson, fraunces].map((f) => f.variable).join(' ');

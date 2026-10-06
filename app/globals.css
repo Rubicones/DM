@@ -336,38 +336,51 @@ body {
   color: var(--t-muted);
 }
 
-.tape {
+.synth-scope {
   position: absolute;
-  width: 120px;
-  height: 28px;
-  background: color-mix(in oklch, var(--t-accent-3) 55%, transparent);
-  border-left: 2px dashed color-mix(in oklch, var(--t-fg) 25%, transparent);
-  border-right: 2px dashed color-mix(in oklch, var(--t-fg) 25%, transparent);
+  left: 0;
+  right: 0;
+  bottom: 84px;
+  width: 100%;
+  height: 110px;
+  overflow: visible;
+  opacity: 0.32;
 }
-.tape-1 { left: 3%; top: 76px; rotate: -8deg; }
-.tape-2 { right: 4%; bottom: 112px; rotate: 6deg; background: color-mix(in oklch, var(--t-accent-1) 45%, transparent); }
-.zine-star { position: absolute; width: 34px; height: 34px; }
-.zine-star polygon { fill: var(--t-accent-3); stroke: var(--t-fg); stroke-width: 2.5; stroke-linejoin: round; }
-.zine-star-1 { left: 7%; top: 40%; rotate: 12deg; }
-.zine-star-2 { right: 7%; top: 64%; width: 24px; height: 24px; rotate: -18deg; }
-.zine-star-2 polygon { fill: var(--t-accent-1); }
-.zine-scribble { position: absolute; left: 4%; bottom: 128px; width: 150px; }
-.zine-scribble path { stroke: var(--t-accent-2); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.zine-circled {
+.synth-scope path { fill: none; vector-effect: non-scaling-stroke; }
+.synth-scope-line { stroke: var(--t-accent-1); stroke-width: 1.4; }
+.synth-scope-glow { stroke: var(--t-accent-1); stroke-width: 7; opacity: 0.12; }
+.synth-scope-axis { stroke: var(--t-accent-1); stroke-width: 1; opacity: 0.18; stroke-dasharray: 2 6; }
+.synth-panel {
   position: absolute;
-  right: 6%;
+  right: 40px;
   top: 84px;
-  width: 120px;
-  height: 60px;
   display: grid;
-  place-items: center;
-  font-family: var(--t-font-display);
-  font-size: 22px;
-  color: var(--t-accent-1);
-  rotate: -6deg;
+  gap: 4px;
+  justify-items: end;
+  font-family: var(--t-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--t-muted);
 }
-.zine-circled svg { position: absolute; inset: 0; }
-.zine-circled path { stroke: var(--t-fg); stroke-width: 2.5; stroke-linecap: round; }
+.synth-panel-patch {
+  margin-top: 4px;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in oklch, var(--t-accent-1) 45%, transparent);
+  color: var(--t-accent-1);
+}
+/* four-point star, like a lens flare on a panel LED */
+.synth-spark {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  translate: -50% -50%;
+  background: currentColor;
+  clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%);
+  opacity: 0.7;
+}
+.synth-spark-c { color: var(--t-accent-1); }
+.synth-spark-p { color: var(--t-accent-2); width: 10px; height: 10px; }
 
 .soft-blob {
   position: absolute;
@@ -381,7 +394,8 @@ body {
 .soft-blob-3 { left: 20%; bottom: -26vmax; background: radial-gradient(closest-side, var(--t-accent-3), transparent); }
 
 @media (max-width: 767px) {
-  .poster-meta, .box-x, .zine-circled, .zine-scribble { display: none; }
+  .poster-meta, .box-x, .synth-panel { display: none; }
+  .synth-scope { bottom: 4px; height: 70px; opacity: 0.22; }
 }
 
 /* ───────────── stations (rail view) */
@@ -670,6 +684,15 @@ body {
 /* figures only animate on the card that is showing */
 .station[data-state="hidden"] :is(.obj3d-spin, .bb),
 .m-panel:not([data-state="active"]) :is(.obj3d-spin, .bb) { animation-play-state: paused; }
+
+/* Audio (FM synth): Michroma is very wide → smaller, spaced, panel-style capitals */
+.theme-audio :is(h1, h2, h3).t-display {
+  font-size: clamp(20px, 2.1vw, 27px);
+  line-height: 1.3;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.theme-audio .tag { box-shadow: 0 0 10px -4px var(--t-accent-1); }
 
 /* project brand tile: square icon slot (placeholder until real icons land) */
 .project-icon {

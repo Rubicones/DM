@@ -1,15 +1,15 @@
 'use client';
 
 import type { ThemeId } from '@/config/themes';
-import { atkinson, dmSans, fraunces, interTight, marker, typewriter } from '@/app/fonts';
+import { atkinson, fraunces, interTight, michroma, plexMono, plexSans } from '@/app/fonts';
 
 /** Families each non-default theme needs (brutalist fonts are preloaded by next/font). */
 const THEME_FONTS: Partial<Record<ThemeId, { family: string; weights: string[] }[]>> = {
   dark3d: [{ family: interTight.style.fontFamily, weights: ['400', '700'] }],
   audio: [
-    { family: marker.style.fontFamily, weights: ['400'] },
-    { family: dmSans.style.fontFamily, weights: ['400', '700'] },
-    { family: typewriter.style.fontFamily, weights: ['400'] },
+    { family: michroma.style.fontFamily, weights: ['400'] },
+    { family: plexSans.style.fontFamily, weights: ['400', '600'] },
+    { family: plexMono.style.fontFamily, weights: ['400', '500'] },
   ],
   human: [
     { family: atkinson.style.fontFamily, weights: ['400', '700'] },

@@ -223,7 +223,7 @@ const curvesOf = (ch: Chapter, mode: LayoutMode): ChapterGeometry => ({ ...railL
 function envelope(geom: PathGeometry, kind: LegKind, cp: ChapterGeometry) {
   if (geom === 'orthogonal') return 0;
   const cut = 0.3 * cp.radius; // fillet cuts the corner by ≤ (1 − 1/√2)·r
-  return geom === 'sine' && kind === 'lead' ? cp.amplitude + cut + 4 : cut;
+  return geom === 'sine' && (kind === 'lead' || cp.continuous) ? cp.amplitude + cut + 4 : cut;
 }
 
 /** Card sizes are bucketed for planning so tiny reflows (font swap) don't reshuffle the whole rail. */
@@ -722,7 +722,7 @@ function renderRail(chapters: Chapter[], mode: LayoutMode, plan: PlanResult, com
     const r1 = k < n - 1 ? r[k + 1] : 0;
     const geom = geoms[l.chapter];
     const cp = cps[l.chapter];
-    const sineOn = geom === 'sine' && l.kind === 'lead';
+    const sineOn = geom === 'sine' && (l.kind === 'lead' || cp.continuous);
     const wobble = themes[chapters[l.chapter].theme].rail.sketch;
     const sA = { x: l.a.x + d.x * r0, y: l.a.y + d.y * r0 };
     const straight = len - r0 - r1;
@@ -765,7 +765,7 @@ function renderRail(chapters: Chapter[], mode: LayoutMode, plan: PlanResult, com
       const P3 = { x: C.x + d2.x * r1, y: C.y + d2.y * r1 };
       const P2 = { x: P3.x - d2.x * K * r1, y: P3.y - d2.y * K * r1 };
       const nextGeom = geoms[nx.chapter];
-      const on = sineOn && nextGeom === 'sine' && nx.kind === 'lead' && nx.chapter === l.chapter;
+      const on = sineOn && nextGeom === 'sine' && (nx.kind === 'lead' || cps[nx.chapter].continuous) && nx.chapter === l.chapter;
       const m = 12;
       for (let i = 1; i <= m; i++) {
         const t = i / m;
