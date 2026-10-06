@@ -561,6 +561,7 @@ body {
   position: absolute;
   left: 0;
   top: 0;
+  z-index: 3; /* above the stations and their connector lines */
   will-change: transform;
 }
 .rider-ring {
@@ -610,6 +611,86 @@ body {
    One full-screen world: rider pinned bottom-centre, station panels open
    above their markers. Sizes come from config/content.ts → mobileLayout /
    railLayout.mobile.camera (as --m-* vars on the stage). svh only. */
+
+/* proficiency meter: 5 squares, filled up to the level */
+.skill-meter { display: inline-flex; gap: 3px; flex: none; }
+.skill-meter > span {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--t-fg);
+  border-radius: calc(var(--t-radius) * 0.15);
+}
+.skill-meter > span[data-on] { background: var(--t-accent-3); }
+[data-theme="dark3d"] .skill-meter > span[data-on],
+.theme-dark3d .skill-meter > span[data-on] { background: var(--t-fg); }
+
+/* 3D feature figure: CSS 3D wireframes (compositor-only transforms, no WebGL) */
+.obj3d-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12%;
+  perspective: 700px;
+  color: var(--t-fg);
+}
+.obj3d { --s: 64px; position: relative; width: var(--s); height: var(--s); transform-style: preserve-3d; }
+.obj3d-b { --s: 84px; }
+.obj3d-c { --s: 36px; }
+.obj3d-spin {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: obj3d-spin 14s linear infinite;
+}
+.obj3d-b .obj3d-spin { animation-duration: 22s; animation-direction: reverse; }
+.obj3d-c .obj3d-spin { animation-duration: 9s; }
+@keyframes obj3d-spin {
+  from { transform: rotateX(-24deg) rotateY(0deg) rotateZ(8deg); }
+  to { transform: rotateX(-24deg) rotateY(360deg) rotateZ(8deg); }
+}
+.cube-face {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid currentColor;
+  background: color-mix(in oklch, currentColor 6%, transparent);
+}
+.cube-front { transform: translateZ(calc(var(--s) / 2)); }
+.cube-back { transform: rotateY(180deg) translateZ(calc(var(--s) / 2)); }
+.cube-left { transform: rotateY(-90deg) translateZ(calc(var(--s) / 2)); }
+.cube-right { transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); }
+.cube-top { transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); }
+.cube-bottom { transform: rotateX(-90deg) translateZ(calc(var(--s) / 2)); }
+.globe-ring {
+  position: absolute;
+  inset: 0;
+  border: 1.2px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.75;
+}
+.globe-ring.globe-eq { transform: rotateX(90deg); opacity: 1; }
+
+/* Human-first feature figure: soft colour fields (gradients, not filter blur → cheap) */
+.blur-blobs { position: absolute; inset: 0; overflow: hidden; }
+.bb {
+  position: absolute;
+  width: 46%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  animation: bb-drift 11s ease-in-out infinite alternate;
+}
+.bb-1 { left: 4%; top: -18%; background: radial-gradient(closest-side, var(--t-accent-1), transparent); }
+.bb-2 { left: 30%; top: 22%; background: radial-gradient(closest-side, var(--t-accent-2), transparent); animation-duration: 13s; animation-delay: -4s; }
+.bb-3 { right: 2%; top: -26%; background: radial-gradient(closest-side, var(--t-accent-3), transparent); animation-duration: 9s; animation-delay: -2s; }
+.bb-4 { right: 18%; bottom: -40%; background: radial-gradient(closest-side, #9fd8ff, transparent); animation-duration: 15s; animation-delay: -7s; }
+@keyframes bb-drift {
+  from { transform: translate3d(-6%, -4%, 0) scale(1); }
+  to { transform: translate3d(8%, 6%, 0) scale(1.15); }
+}
+/* figures only animate on the card that is showing */
+.station[data-state="hidden"] :is(.obj3d-spin, .bb),
+.m-panel:not([data-state="active"]) :is(.obj3d-spin, .bb) { animation-play-state: paused; }
 
 /* project brand tile: square icon slot (placeholder until real icons land) */
 .project-icon {
@@ -935,6 +1016,8 @@ html.rail-snap { scroll-snap-type: y proximity; }
 @media (prefers-reduced-motion: reduce) {
   .station-inner,
   .m-panel-inner,
+  .obj3d-spin,
+  .bb,
   .m-marker-dot,
   .m-sheet,
   .rider-ring,

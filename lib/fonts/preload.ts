@@ -1,13 +1,14 @@
 'use client';
 
 import type { ThemeId } from '@/config/themes';
-import { atkinson, fraunces, interTight, marker, typewriter } from '@/app/fonts';
+import { atkinson, fraunces, interTight, marker, spaceMono, typewriter } from '@/app/fonts';
 
 /** Families each non-default theme needs (brutalist fonts are preloaded by next/font). */
 const THEME_FONTS: Partial<Record<ThemeId, { family: string; weights: string[] }[]>> = {
   dark3d: [{ family: interTight.style.fontFamily, weights: ['400', '700'] }],
   audio: [
     { family: marker.style.fontFamily, weights: ['400'] },
+    { family: spaceMono.style.fontFamily, weights: ['400', '700'] },
     { family: typewriter.style.fontFamily, weights: ['400'] },
   ],
   human: [

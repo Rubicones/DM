@@ -187,9 +187,56 @@ export function Visual({ kind, label }: { kind: FeatureVisual; label?: string })
           </svg>
         </Frame>
       );
+    case 'objects-3d':
+      // CSS 3D (composited transforms, no WebGL): a wireframe cube, a globe of rings, a small cube
+      return (
+        <Frame label={label}>
+          <div className="obj3d-stage">
+            <Cube className="obj3d obj3d-a" />
+            <Globe className="obj3d obj3d-b" />
+            <Cube className="obj3d obj3d-c" />
+          </div>
+        </Frame>
+      );
+    case 'blur-blobs':
+      return (
+        <Frame label={label}>
+          <div className="blur-blobs">
+            <span className="bb bb-1" />
+            <span className="bb bb-2" />
+            <span className="bb bb-3" />
+            <span className="bb bb-4" />
+          </div>
+        </Frame>
+      );
     case 'none':
       return null;
   }
+}
+
+function Cube({ className }: { className: string }) {
+  return (
+    <span className={className}>
+      <span className="obj3d-spin">
+        {['front', 'back', 'left', 'right', 'top', 'bottom'].map((f) => (
+          <span key={f} className={`cube-face cube-${f}`} />
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function Globe({ className }: { className: string }) {
+  return (
+    <span className={className}>
+      <span className="obj3d-spin">
+        {[0, 30, 60, 90, 120, 150].map((a) => (
+          <span key={a} className="globe-ring" style={{ transform: `rotateY(${a}deg)` }} />
+        ))}
+        <span className="globe-ring globe-eq" />
+      </span>
+    </span>
+  );
 }
 
 // static dotted sphere (plain view / reduced motion)

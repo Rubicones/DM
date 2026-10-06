@@ -4,7 +4,7 @@
  * `t-*` / `tag` / `btn` / `card-pad` classes in globals.css.
  */
 import type { ReactNode } from 'react';
-import type { ProjectStation, Station } from '@/config/content';
+import type { FeatureStation, ProjectStation, Station } from '@/config/content';
 import { projectNumber } from '@/lib/content-index';
 import { pad } from '@/lib/rail/format';
 import { Visual } from './visuals';
@@ -38,6 +38,30 @@ function Tags({ items, label, filledFirst }: { items: string[]; label: string; f
       {items.map((t, i) => (
         <li key={`${t}-${i}`} className="tag t-label px-2 py-1 text-[10px] md:text-[11px]" data-filled={filledFirst && i === 0 ? '' : undefined}>
           {t}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const LEVEL = ['', 'Learning', 'Working knowledge', 'Proficient', 'Advanced', 'Expert'] as const;
+
+/** Technology + 5-step proficiency meter. */
+function Skills({ items }: { items: NonNullable<FeatureStation['skills']> }) {
+  return (
+    <ul className="t-divide t-rule-y mt-5" aria-label="Technologies and proficiency">
+      {items.map((k) => (
+        <li key={k.name} className="skill-row flex items-center gap-3 py-2">
+          <span className="t-body-sm min-w-0 flex-1 font-bold">{k.name}</span>
+          <span className="skill-meter" aria-hidden>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <span key={i} data-on={i <= k.level ? '' : undefined} />
+            ))}
+          </span>
+          <span className="t-label w-[9.5em] text-right text-[10px] text-muted md:text-[11px]">
+            {LEVEL[k.level]}
+            <span className="sr-only"> ({k.level} of 5)</span>
+          </span>
         </li>
       ))}
     </ul>
@@ -232,6 +256,7 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
             {s.title}
           </h3>
           <p className="t-body mt-4">{s.text}</p>
+          {s.skills && s.skills.length > 0 && <Skills items={s.skills} />}
           {s.tags && s.tags.length > 0 && (
             <div className="mt-5">
               <Tags items={s.tags} label="Tags" />

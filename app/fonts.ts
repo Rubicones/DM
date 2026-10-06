@@ -13,6 +13,7 @@ import {
   JetBrains_Mono,
   Permanent_Marker,
   Space_Grotesk,
+  Space_Mono,
   Special_Elite,
 } from 'next/font/google';
 
@@ -24,9 +25,10 @@ export const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbr
 export const interTight = Inter_Tight({ subsets: ['latin'], variable: '--font-inter-tight', display: 'swap', preload: false });
 // audio (gig poster)
 export const marker = Permanent_Marker({ weight: '400', subsets: ['latin'], variable: '--font-permanent-marker', display: 'swap', preload: false });
+export const spaceMono = Space_Mono({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-space-mono', display: 'swap', preload: false });
 export const typewriter = Special_Elite({ weight: '400', subsets: ['latin'], variable: '--font-special-elite', display: 'swap', preload: false });
 // human-first
 export const atkinson = Atkinson_Hyperlegible({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-atkinson', display: 'swap', preload: false });
 export const fraunces = Fraunces({ subsets: ['latin'], axes: ['SOFT', 'WONK', 'opsz'], variable: '--font-fraunces', display: 'swap', preload: false });
 
-export const fontVariables = [archivo, grotesk, mono, interTight, marker, typewriter, atkinson, fraunces].map((f) => f.variable).join(' ');
+export const fontVariables = [archivo, grotesk, mono, interTight, marker, spaceMono, typewriter, atkinson, fraunces].map((f) => f.variable).join(' ');
