@@ -393,9 +393,20 @@ export class RailEngine {
 
   // ───────────────────────── public controls & queries
 
+  /**
+   * Called when code navigates (nav, chips, "Let's talk", markers) while the page is
+   * locked before "Start journey". The handler must unlock synchronously; the
+   * navigation then proceeds instead of being swallowed by the scroll lock.
+   */
+  private onLockedNavigate: (() => void) | null = null;
+  setLockedNavigate(fn: (() => void) | null) {
+    this.onLockedNavigate = fn;
+  }
+
   scrollToProgress(p: number) {
     const g = this.geo;
     if (!g) return;
+    if (this.locked) this.onLockedNavigate?.();
     this.scrollToY(lenToScroll(g.scrollMap, clamp(p) * g.total));
   }
 

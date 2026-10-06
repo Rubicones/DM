@@ -735,6 +735,7 @@ body {
   aspect-ratio: 1;
   border: 2px solid currentColor;
 }
+.project-icon[data-frame="none"] { border: 0; }
 
 html.scroll-locked,
 html.scroll-locked .rail-scroller,

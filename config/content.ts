@@ -65,6 +65,10 @@ export interface ProjectStation extends StationBase {
   color: string;
   /** Optional icon path (in /public), shown inside the tile. Falls back to a square placeholder. */
   icon?: string;
+  /** Optional animated 3D icon (GLB in /public) — replaces `icon`. Its baked clips play forward on hover and back on leave. */
+  iconModel?: string;
+  /** false → no frame around the icon (for icons that bring their own background). Default true. */
+  iconFrame?: boolean;
 }
 export interface StackStation extends StationBase {
   kind: 'stack';
@@ -351,7 +355,7 @@ export const chapters: Chapter[] = [
         size: 'lg',
         title: "Hi, I'm Dmitriy.",
         paragraphs: [
-          'A Design Engineer and Creative Frontend Developer. I build digital products where high-end visual design meets complex technical architecture.',
+          'A Web Engineer and Creative Frontend Developer. I build digital products where high-end visual design meets complex technical architecture.',
           "As both the designer and developer of my projects, I don't just execute technical tasks. My process starts with deeply understanding your goals to find a visual language that reflects the core of your product.",
           'I strive to "humanize" digital experiences – making them empathetic, intuitive, and tactile through an obsessive attention to small details and micro-interactions.',
         ],
@@ -402,6 +406,7 @@ export const chapters: Chapter[] = [
         stack: ['Next.js', 'TypeScript', 'Tailwind CSS', 'Framer Motion', 'GSAP'],
         link: { label: 'vortex.foundation', href: 'https://vortex.foundation' },
         color: '#91eb44',
+        icon: '/projects/vortex.png',
       },
       {
         id: 'project-bakery',
@@ -414,6 +419,7 @@ export const chapters: Chapter[] = [
         stack: ['Next.js', 'TypeScript', 'Tailwind CSS', 'Node.js'],
         link: { label: 'basicbakery.rs', href: 'https://basicbakery.rs' },
         color: '#e3735a',
+        icon: '/projects/basic-bakery.png',
       },
     ],
   },
@@ -448,6 +454,7 @@ export const chapters: Chapter[] = [
         stack: ['Next.js', 'Three.js', 'Spline', 'Tailwind CSS'],
         link: { label: 'matveibrumberg.vercel.app', href: 'https://matveibrumberg.vercel.app/' },
         color: '#f7db25',
+        iconModel: '/projects/mb-logo.glb',
       },
       {
         id: 'project-foam',
@@ -460,6 +467,7 @@ export const chapters: Chapter[] = [
         stack: ['Next.js', 'Supabase', 'Three.js', 'Tone.js', 'Resonance Audio'],
         link: { label: 'foamacoustic.app', href: 'https://foamacoustic.app/' },
         color: '#ffffff',
+        icon: '/projects/foam.svg',
       },
     ],
   },
@@ -496,6 +504,7 @@ export const chapters: Chapter[] = [
         stack: ['Next.js', 'Web Audio API', 'Tone.js', 'Motion', 'Supabase'],
         link: { label: 'sonicdesk.studio', href: 'https://sonicdesk.studio' },
         color: '#dfff00',
+        icon: '/projects/sonicdesk.svg',
       },
       {
         id: 'project-tower',
@@ -508,6 +517,8 @@ export const chapters: Chapter[] = [
         stack: ['Next.js', 'TypeScript', 'Tone.js', 'Tonal.js'],
         link: { label: 'tower.rubicones.dev', href: 'https://tower.rubicones.dev/' },
         color: '#0e1728',
+        icon: '/projects/tower.svg',
+        iconFrame: false,
       },
       {
         id: 'project-mono',
@@ -552,6 +563,7 @@ export const chapters: Chapter[] = [
         stack: ['Astro', 'Three.js (R3F)', 'Tailwind CSS', 'Framer Motion'],
         link: { label: 'alevtina-psy.com', href: 'https://alevtina-psy.com' },
         color: '#b097f9',
+        icon: '/projects/alevtyna.svg',
       },
     ],
   },

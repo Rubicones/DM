@@ -42,3 +42,6 @@ npm run dev      # http://localhost:3000  (?view=plain forces the flat page)
 - **Perf overlay** (dev builds, or production built with `NEXT_PUBLIC_PERF=1`): add `?perf` to the URL or press **Alt+Shift+P**. Shows FPS, avg/worst frame time (last 120 frames), main-thread ms per subsystem (progress, camera, rail, stations, theme, 3d, sound), `renderer.info`, tier, chapter, rendered stations, visible rail chunks.
 - **Quality tiers**: `config/quality.ts` (presets + runtime budget). Detection in `lib/quality/detect.ts` (heuristics + lazy `detect-gpu` with self-hosted data in `public/detect-gpu`). Force with `?tier=high|medium|low|fallback`.
 - One ticker: `RailEngine.tick` (`lib/rail/engine.ts`). Geometry is planned time-sliced (`buildRailAsync`), sampled through an O(1) arc-length LUT (`lib/rail/lut.ts`), rendered as culled chunks (`components/rail/RailSvg.tsx`).
+
+## Project icons
+- `icon: '/projects/<name>.png'` — static logo in the project tile. `iconModel: '/projects/<name>.glb'` — animated 3D icon (`components/ModelIcon.tsx` + lazy `lib/scene/modelIcon.ts`): mounts near the viewport, renders on demand, plays the GLB's clips forward on hover / focus (tap on touch) and back on leave; no-WebGL tier → first letter.

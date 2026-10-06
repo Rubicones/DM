@@ -200,7 +200,7 @@ export const themes: Record<ThemeId, Theme> = {
       frame: 'rgba(10, 10, 10, 0.6)',
       chipBg: '#0A0A0A',
       chipFg: '#E8FF00',
-      indexBg: '#E8FF00',
+      indexBg: '#FF3B00',
       indexFg: '#0A0A0A',
       tagBorder: '#0A0A0A',
       tagBg: 'rgba(0,0,0,0)',

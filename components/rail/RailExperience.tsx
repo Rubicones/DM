@@ -138,6 +138,17 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
     setJourney('jumping');
     void landed.then(() => setJourney('done'));
   };
+  // navigating before "Start journey" (footer nav, menu, chips, "Let's talk") starts it on the spot:
+  // the rider appears where it is (no jump — the camera is about to move) and the scroll goes through
+  useEffect(() => {
+    engine.setLockedNavigate(() => {
+      if (journey === 'idle') sound.start();
+      engine.setLocked(false);
+      document.documentElement.classList.remove('journey-locked');
+      setJourney('done');
+    });
+    return () => engine.setLockedNavigate(null);
+  }, [engine, journey, sound]);
   const idle = journey === 'idle';
   const startButton = (
     <div className="journey-actions" aria-hidden={idle ? undefined : true}>

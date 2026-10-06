@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import type { FeatureStation, ProjectStation, Station } from '@/config/content';
 import { projectNumber, stationById } from '@/lib/content-index';
 import { pad } from '@/lib/rail/format';
+import { ModelIcon } from './ModelIcon';
 import { Visual } from './visuals';
 
 interface Props {
@@ -105,14 +106,20 @@ function ProjectVisual({ p }: { p: ProjectStation }) {
   }
   const ink = inkOn(p.color);
   return (
-    <div
-      className="visual project-tile relative aspect-[16/7] w-full overflow-hidden md:aspect-[16/4.5]"
+    // whole tile links to the site; the "View project" button stays the accessible link
+    <a
+      href={p.link.href}
+      {...(p.link.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      tabIndex={-1}
+      className="visual project-tile relative block aspect-[16/7] w-full overflow-hidden md:aspect-[16/4.5]"
       style={{ background: p.color, color: ink, borderColor: ink === '#0A0A0A' ? undefined : p.color }}
       aria-hidden
     >
       <span className="t-label absolute left-3 top-3 text-[10px]">Selected work / {pad(n)}</span>
-      <span className="project-icon absolute bottom-3 left-3">
-        {p.icon ? (
+      <span className="project-icon absolute bottom-3 left-3" data-frame={p.iconFrame === false ? 'none' : undefined}>
+        {p.iconModel ? (
+          <ModelIcon src={p.iconModel} fallback={<span className="t-display text-2xl leading-none">{p.title.charAt(0)}</span>} />
+        ) : p.icon ? (
           // eslint-disable-next-line @next/next/no-img-element -- small static icon
           <img src={p.icon} alt="" className="size-full object-contain" />
         ) : (
@@ -120,7 +127,7 @@ function ProjectVisual({ p }: { p: ProjectStation }) {
         )}
       </span>
       <span className="t-display absolute bottom-2 right-3 text-5xl leading-none opacity-90 md:text-6xl">{pad(n)}</span>
-    </div>
+    </a>
   );
 }
 

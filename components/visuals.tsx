@@ -243,11 +243,6 @@ export function Visual({ kind, label }: { kind: FeatureVisual; label?: string })
             </g>
             <circle cx={92} cy={122} r={6} fill="var(--t-accent-2)" />
             <circle cx={110} cy={128} r={6} fill="var(--t-accent-3)" />
-            {/* the note: three rings, like a speaker cone pictogram */}
-            <g fill="none" stroke="var(--t-accent-1)" strokeWidth={3}>
-              <path d="M386 66 a 26 26 0 0 1 0 40" />
-              <path d="M374 74 a 14 14 0 0 1 0 24" opacity={0.6} />
-            </g>
           </svg>
         </Frame>
       );
