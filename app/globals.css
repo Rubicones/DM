@@ -24,6 +24,15 @@ html {
   background: var(--t-bg);
   color: var(--t-fg);
 }
+/* no page scrollbar (scrolling itself is unchanged): the rail's HUD shows progress */
+html,
+.rail-scroller {
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar,
+.rail-scroller::-webkit-scrollbar {
+  display: none;
+}
 body {
   font-family: var(--t-font-body);
   font-weight: var(--t-body-weight);
