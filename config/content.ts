@@ -271,7 +271,7 @@ export const railLayout: {
       railClearance: 120,
       cardClearance: 56,
       cardSpacing: 48,
-      chapterLead: 700,
+      chapterLead: 1300,
       candidates: 64,
       tallCard: 400,
     },
@@ -300,7 +300,7 @@ export const railLayout: {
       railClearance: 220,
       cardClearance: 120,
       cardSpacing: 300,
-      chapterLead: 900,
+      chapterLead: 1400,
       candidates: 64,
       tallCard: Infinity, // mobile: cards open in the screen-fixed panel, not beside the rail
     },

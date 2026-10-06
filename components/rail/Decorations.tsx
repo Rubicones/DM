@@ -2,9 +2,6 @@ import { memo } from 'react';
 import { site } from '@/config/content';
 import type { RailEngine } from '@/lib/rail/engine';
 
-/** Kick pattern of the 16-step sequencer strip (1 = hit). */
-const STEPS = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0];
-
 const CROSS: [string, string][] = [
   ['5%', '22%'], ['95%', '22%'],
   ['5%', '50%'], ['95%', '50%'],
@@ -34,14 +31,13 @@ export const Decorations = memo(function Decorations({ engine }: { engine: RailE
         </div>
       </div>
 
-      {/* Audio — Teenage Engineering-style instrument: product label, speaker grille, LCD, live 16-step sequencer */}
+      {/* Audio — Teenage Engineering-style instrument: product label, record key, LCD */}
       <div ref={engine.bindLayer('deco', 'audio')} className="deco deco-audio">
-        <div className="te-label">
-          <span className="te-label-name">R.A.I.L. Ⅰ</span>
-          <span className="te-label-jp">サウンド</span>
-          <span className="te-label-sub">16 step rail sequencer</span>
-        </div>
-        <span className="te-grille" />
+        <span className="te-label">Rubicon</span>
+        <span className="te-rec">
+          <span className="te-rec-key" />
+          <span className="te-rec-label">rec</span>
+        </span>
         <div className="te-lcd">
           <span className="te-lcd-bar">bar</span>
           <span className="te-lcd-num">120.0</span>
@@ -49,24 +45,15 @@ export const Decorations = memo(function Decorations({ engine }: { engine: RailE
           <span className="te-lcd-play" />
           <span className="te-lcd-fx">fx</span>
         </div>
-        <div className="te-seq">
-          <span className="te-seq-title">sequencer</span>
-          <div className="te-seq-steps">
-            {STEPS.map((hit, i) => (
-              <span key={i} className="te-step" data-hit={hit ? '' : undefined}>
-                <span className="te-step-n">{i + 1}</span>
-              </span>
-            ))}
-            <span className="te-seq-head" />
-          </div>
-        </div>
       </div>
 
-      {/* Human-first — soft pastel fields */}
+      {/* Human-first — large soft colour blooms, drifting slowly */}
       <div ref={engine.bindLayer('deco', 'human')} className="deco deco-human">
         <span className="soft-blob soft-blob-1" />
         <span className="soft-blob soft-blob-2" />
         <span className="soft-blob soft-blob-3" />
+        <span className="soft-blob soft-blob-4" />
+        <span className="soft-blob soft-blob-5" />
       </div>
     </div>
   );

@@ -13,7 +13,8 @@ const THEME_FONTS: Partial<Record<ThemeId, { family: string; weights: string[] }
   ],
   human: [
     { family: atkinson.style.fontFamily, weights: ['400', '700'] },
-    { family: fraunces.style.fontFamily, weights: ['500'] },
+    { family: fraunces.style.fontFamily, weights: ['400'] },
+    { family: dmMono.style.fontFamily, weights: ['400'] },
   ],
 };
 
