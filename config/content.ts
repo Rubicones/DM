@@ -286,7 +286,7 @@ export const railLayout: {
     cardGap: 0,
     revealAhead: 0,
     chunkLength: 900,
-    scrollPerPx: 0.6,
+    scrollPerPx: 1.2,
     worldScale: 0.5,
     wander: {
       halfWidth: 4500,
@@ -305,8 +305,9 @@ export const railLayout: {
       tallCard: Infinity, // mobile: cards open in the screen-fixed panel, not beside the rail
     },
     curves: { radius: 340, amplitude: 70, wavelength: 1100, continuous: false },
-    dwell: { enabled: true, base: 140, perChar: 0.45, min: 160, max: 700, creep: 0.3 },
-    stop: { brake: 150, release: 120, creep: 0.3, snap: false },
+    // twice the scroll distance of desktop-like tuning: one quick swipe covers a stop or two, not the site
+    dwell: { enabled: true, base: 280, perChar: 0.9, min: 320, max: 1400, creep: 0.15 },
+    stop: { brake: 300, release: 240, creep: 0.15, snap: false },
   },
 };
 
