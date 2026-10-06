@@ -8,7 +8,7 @@ import { preloadThemeFonts } from '@/lib/fonts/preload';
 import { initQuality } from '@/lib/quality/detect';
 import { buildRail, buildRailAsync, type LayoutMode, type RailGeometry, type Size } from '@/lib/rail/geometry';
 import { useEngineInstance, useMediaQuery, useRailEngine } from '@/lib/rail/hooks';
-import { jumpIntoRider } from '@/lib/rail/journey';
+import { JUMP_MS, LAND_AT, jumpIntoRider } from '@/lib/rail/journey';
 import { useRailSound } from '@/lib/sound/useRailSound';
 import { SketchOutline } from '../SketchOutline';
 import { StationContent } from '../StationContent';
@@ -134,9 +134,16 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
     // rects are read now, before the dot is hidden by the state change
     const dot = engine.dom.stage?.querySelector<HTMLElement>('[data-station="intro"] .intro-dot');
     const riderDot = engine.dom.rider?.querySelector<HTMLElement>('.rider-dot');
-    const landed = dot && riderDot ? jumpIntoRider(dot, riderDot) : Promise.resolve();
+    const landed = dot && riderDot ? jumpIntoRider(dot, riderDot) : null;
+    // (reduced motion: jumpIntoRider resolves at once, no flight → no flight sounds)
+    if (landed && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      // whoosh rising over the flight; the latch fires a touch before contact so it feels tactile
+      const land = JUMP_MS * LAND_AT;
+      sound.rise(land / 1000);
+      window.setTimeout(sound.latch, land - 45);
+    }
     setJourney('jumping');
-    void landed.then(() => setJourney('done'));
+    void (landed ?? Promise.resolve()).then(() => setJourney('done'));
   };
   // navigating before "Start journey" (footer nav, menu, chips, "Let's talk") starts it on the spot:
   // the rider appears where it is (no jump — the camera is about to move) and the scroll goes through

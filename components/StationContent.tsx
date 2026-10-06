@@ -193,7 +193,7 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
           <ol className="t-divide t-rule-y mt-5">
             {s.items.map((item, i) => (
               <li key={i} className="grid grid-cols-[auto_1fr] gap-x-4 py-2.5">
-                <span className="t-index t-label mt-0.5 px-1.5 text-[11px] font-bold leading-5" aria-hidden>
+                <span className="t-index t-label mt-0.5 px-1.5 text-[11px] font-bold leading-5" data-accent={s.indexAccent} aria-hidden>
                   {pad(i + 1)}
                 </span>
                 <div>

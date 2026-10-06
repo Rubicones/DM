@@ -25,6 +25,7 @@ import { soundConfig } from '@/config/sound';
 import { themes, type SoundEngineId, type ThemeId } from '@/config/themes';
 import type { FrameState, RailEngine } from '@/lib/rail/engine';
 import { dashPeriod } from '@/lib/theme/tokens';
+import { LOOKAHEAD, playBuffer } from './dsp';
 import { renderBank, type BufferBank } from './bank';
 import { bassDots } from './engines/bassDots';
 import { pencil } from './engines/pencil';
@@ -111,6 +112,49 @@ export class SoundSystem {
     GESTURES.forEach((ev) => window.addEventListener(ev, this.onGesture, { capture: true, passive: true }));
     this.unsubscribe = this.rail.addFrameListener(this.onFrame);
     this.resume();
+  }
+
+  /**
+   * Rising whoosh for the start jump — the human-first pencil noise (same looped
+   * pink noise) through a band-pass sweeping up while it swells, cut at landing.
+   */
+  playRise(seconds: number) {
+    const ctx = this.ctx;
+    const master = this.master;
+    const bank = this.bank;
+    if (!ctx || !master || !bank) return;
+    const t0 = ctx.currentTime + LOOKAHEAD;
+    const t1 = t0 + seconds;
+    const src = ctx.createBufferSource();
+    src.buffer = bank.noise;
+    src.loop = true;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 1.3;
+    bp.frequency.setValueAtTime(400, t0);
+    bp.frequency.exponentialRampToValueAtTime(5200, t1);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.32, t0 + seconds * 0.9);
+    g.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.05);
+    src.connect(bp).connect(g).connect(master);
+    src.onended = () => {
+      src.disconnect();
+      bp.disconnect();
+      g.disconnect();
+    };
+    src.start(t0, Math.random() * 1.5);
+    src.stop(t1 + 0.08);
+  }
+
+  /** One-shot "latch" — the rider snapping onto the rail at the end of the start jump. */
+  playLatch() {
+    const ctx = this.ctx;
+    const master = this.master;
+    const bank = this.bank;
+    if (!ctx || !master || !bank) return;
+    this.resume(false);
+    playBuffer(ctx, bank.latch, master, 1, 0.7);
   }
 
   /**

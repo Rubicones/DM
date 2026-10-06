@@ -6,23 +6,30 @@ import { renderBuffer } from './dsp';
 
 export interface BufferBank {
   click: AudioBuffer;
+  /** One-shot: the rider latching onto the rail at the end of the "Start journey" jump. */
+  latch: AudioBuffer;
   bass: AudioBuffer[];
   noise: AudioBuffer;
   grain: AudioBuffer;
 }
 
 export function renderBank(ctx: BaseAudioContext, rng: () => number): BufferBank {
-  // ratchet click: crisp filtered noise burst + very short tick
+  // general click: soft tactile tap, set fairly high (~2.4 kHz) — a "tock" carries it, the press /
+  // release edges are only a hint (double edge ~3.5 ms apart = tactile, but
+  // low and quiet so it doesn't read as clicky). No low-mid body → still light.
   let hp = 0;
   let prev = 0;
-  const click = renderBuffer(ctx, 0.03, (t) => {
+  const RELEASE = 0.0035;
+  const edge = (t: number, a: number) => (t < 0 ? 0 : a);
+  const click = renderBuffer(ctx, 0.018, (t) => {
     const n = rng() * 2 - 1;
-    hp = 0.86 * (hp + n - prev);
+    hp = 0.6 * (hp + n - prev); // steeper high-pass → only the "snap" of the noise
     prev = n;
-    const noise = hp * Math.exp(-t / 0.0022) * 0.9;
-    const tick = Math.sin(2 * Math.PI * 2650 * t) * Math.exp(-t / 0.0007) * 0.7;
-    const body = Math.sin(2 * Math.PI * 820 * t) * Math.exp(-t / 0.004) * 0.25;
-    return noise + tick + body;
+    const press = hp * Math.exp(-t / 0.0004) * 0.3 + Math.sin(2 * Math.PI * 4400 * t) * Math.exp(-t / 0.0004) * 0.2;
+    const tock = Math.sin(2 * Math.PI * 2400 * t) * Math.exp(-t / 0.0018) * 0.42;
+    const r = t - RELEASE;
+    const release = edge(r, 1) * (hp * Math.exp(-r / 0.0004) * 0.12 + Math.sin(2 * Math.PI * 5200 * r) * Math.exp(-r / 0.0003) * 0.1);
+    return press + tock + release;
   });
 
   // 3D: bassy plucks with a fast pitch drop + sub thump
@@ -52,5 +59,19 @@ export function renderBank(ctx: BaseAudioContext, rng: () => number): BufferBank
   });
   const grain = renderBuffer(ctx, 0.006, (t) => (rng() * 2 - 1) * Math.exp(-t / 0.0012));
 
-  return { click, bass: [pluck(55), pluck(68), pluck(82)], noise, grain };
+  // latch: a crisp mechanical snap — bright transient, short metallic ring
+  // (two inharmonic partials) and a small low "seat" thud as it locks in
+  let lhp = 0;
+  let lprev = 0;
+  const latch = renderBuffer(ctx, 0.12, (t) => {
+    const n = rng() * 2 - 1;
+    lhp = 0.7 * (lhp + n - lprev);
+    lprev = n;
+    const snap = lhp * Math.exp(-t / 0.0009) * 0.8 + Math.sin(2 * Math.PI * 3800 * t) * Math.exp(-t / 0.0006) * 0.5;
+    const ring = (Math.sin(2 * Math.PI * 2350 * t) * 0.18 + Math.sin(2 * Math.PI * 3710 * t) * 0.1) * Math.exp(-t / 0.028);
+    const seat = Math.sin(2 * Math.PI * 180 * t) * Math.exp(-t / 0.018) * Math.min(1, t / 0.002) * 0.35;
+    return snap + ring + seat;
+  });
+
+  return { click, latch, bass: [pluck(55), pluck(68), pluck(82)], noise, grain };
 }

@@ -148,6 +148,9 @@ body {
     border-radius: var(--t-tag-radius);
     outline: var(--t-tag-border-width) solid var(--t-tag-border);
   }
+  .t-index[data-accent="accent1"] { background: var(--t-accent-1); color: var(--t-on-accent-1); }
+  .t-index[data-accent="accent2"] { background: var(--t-accent-2); color: var(--t-on-accent-2); }
+  .t-index[data-accent="accent3"] { background: var(--t-accent-3); color: var(--t-on-accent-3); }
 
   .tag {
     border: var(--t-tag-border-width) solid var(--t-tag-border);

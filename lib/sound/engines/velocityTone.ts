@@ -1,7 +1,8 @@
 /**
- * AUDIO — continuous soft tone: detuned triangle pair → gentle low-pass.
+ * AUDIO — continuous warm tone: detuned sine/triangle pair + a quiet sine an octave above,
+ * through a soft low-pass that tracks the pitch (never past ~2 kHz → no edge).
  * Pitch follows SMOOTHED scroll velocity, quantised to an A-minor pentatonic
- * (glide between targets); cutoff opens with speed; silent when the rider stops.
+ * (A3…A5), with a slow glide; silent when the rider stops.
  */
 import { clamp01, holdThenRelease } from '../dsp';
 import type { EngineFactory } from '../types';
@@ -13,24 +14,33 @@ const TOP_SPEED = 2600;
 export const velocityTone: EngineFactory = ({ ctx, out }) => {
   const o1 = ctx.createOscillator();
   const o2 = ctx.createOscillator();
-  o1.type = 'triangle';
+  const high = ctx.createOscillator();
+  o1.type = 'sine';
   o2.type = 'triangle';
-  o1.detune.value = -7;
-  o2.detune.value = 8;
+  high.type = 'sine';
+  o1.detune.value = -6;
+  o2.detune.value = 6;
+  const highGain = ctx.createGain();
+  highGain.gain.value = 0.3; // octave-up shimmer — kept quiet so the tone stays warm
+  const triGain = ctx.createGain();
+  triGain.gain.value = 0.45; // a little triangle for harmonics, tamed by the filter
   const lp = ctx.createBiquadFilter();
   lp.type = 'lowpass';
-  lp.Q.value = 0.8;
-  lp.frequency.value = 420;
+  lp.Q.value = 0.5;
+  lp.frequency.value = 600;
   const amp = ctx.createGain();
   amp.gain.value = 0;
   const bus = ctx.createGain();
   bus.gain.value = 0;
   o1.connect(lp);
-  o2.connect(lp);
+  o2.connect(triGain).connect(lp);
+  high.connect(highGain).connect(lp);
   lp.connect(amp).connect(bus).connect(out);
   o1.frequency.value = o2.frequency.value = PENTATONIC[0];
+  high.frequency.value = PENTATONIC[0] * 2;
   o1.start();
   o2.start();
+  high.start();
 
   let vs = 0;
   return {
@@ -40,10 +50,11 @@ export const velocityTone: EngineFactory = ({ ctx, out }) => {
       const n = clamp01(vs / TOP_SPEED);
       const f = PENTATONIC[Math.round(n * (PENTATONIC.length - 1))];
       const now = ctx.currentTime;
-      o1.frequency.setTargetAtTime(f, now, 0.09);
-      o2.frequency.setTargetAtTime(f, now, 0.09);
-      lp.frequency.setTargetAtTime(380 + n * 2800, now, 0.08);
-      holdThenRelease(amp.gain, 0.16 * clamp01(velocity / 300), ctx, 0.05);
+      o1.frequency.setTargetAtTime(f, now, 0.14);
+      o2.frequency.setTargetAtTime(f, now, 0.14);
+      high.frequency.setTargetAtTime(f * 2, now, 0.14);
+      lp.frequency.setTargetAtTime(600 + n * 1400, now, 0.12);
+      holdThenRelease(amp.gain, 0.2 * clamp01(velocity / 300), ctx, 0.07);
     },
     setGain(x) {
       bus.gain.setTargetAtTime(x, ctx.currentTime, 0.03);
@@ -51,6 +62,7 @@ export const velocityTone: EngineFactory = ({ ctx, out }) => {
     dispose() {
       o1.stop();
       o2.stop();
+      high.stop();
       bus.disconnect();
     },
   };

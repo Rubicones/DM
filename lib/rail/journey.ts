@@ -8,6 +8,9 @@
  * computed style, so it follows the theme tokens.
  */
 const DURATION = 1150;
+/** Jump length and the moment (fraction) the clone touches the rail — sounds sync to these. */
+export const JUMP_MS = DURATION;
+export const LAND_AT = 0.84;
 
 export function jumpIntoRider(dot: HTMLElement, riderDot: HTMLElement): Promise<void> {
   const a = dot.getBoundingClientRect();

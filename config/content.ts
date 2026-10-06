@@ -51,6 +51,8 @@ export interface ListStation extends StationBase {
   kind: 'list';
   title: string;
   items: { title: string; text: string }[];
+  /** Number badges in a theme accent instead of the theme's index colour. */
+  indexAccent?: AccentKey;
 }
 export interface ProjectStation extends StationBase {
   kind: 'project';
@@ -618,6 +620,7 @@ export const chapters: Chapter[] = [
         kind: 'list',
         size: 'lg',
         title: 'Principles',
+        indexAccent: 'accent3',
         items: [
           { title: 'Goals before pixels', text: 'Every project starts with understanding what the product has to achieve — the visual language follows from that.' },
           { title: 'Humanize the interface', text: 'Empathetic, tactile and calm over generic, AI-feeling patterns.' },

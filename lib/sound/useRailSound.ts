@@ -9,6 +9,10 @@ export interface SoundControl {
   /** Turn sound on. Call from inside a user gesture (autoplay policy) — e.g. "Start journey". */
   start: () => void;
   toggle: () => void;
+  /** Rider latches onto the rail (end of the "Start journey" jump). No-op while sound is off. */
+  latch: () => void;
+  /** Rising whoosh over the jump (call right after `start`, inside the same gesture). */
+  rise: (seconds: number) => void;
 }
 
 /**
@@ -70,5 +74,9 @@ export function useRailSound(engine: RailEngine): SoundControl {
     } else start();
   };
 
-  return { on, start, toggle };
+  const latch = () => sys.current?.playLatch();
+  // queued behind start()'s ensure() → the context exists by the time it runs
+  const rise = (seconds: number) => void ensure().then((s) => s.playRise(seconds));
+
+  return { on, start, toggle, latch, rise };
 }
