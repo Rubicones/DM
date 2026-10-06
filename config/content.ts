@@ -473,8 +473,8 @@ export const chapters: Chapter[] = [
         kind: 'feature',
         size: 'md',
         visual: 'guitar',
-        title: 'A musician who codes',
-        text: 'I play guitar, so sound is not an abstraction to me: tone, dynamics, harmony, mixing and the feel of an instrument under the fingers. That ear goes into every audio interface I build — synths, mixers and generative scores on the Web Audio API.',
+        title: 'My greatest passion',
+        text: 'Being a musician myself, I play guitar and know sound from the inside: tone, dynamics, harmony, mixing and the way an instrument answers the fingers. That ear goes into every audio interface I build — synths, mixers, generative scores and spatial audio on the Web Audio API.',
         skills: [
           { name: 'Web Audio API', projects: ['project-sonicdesk', 'project-foam'] },
           { name: 'Tone.js', projects: ['project-sonicdesk', 'project-tower', 'project-mono', 'project-foam'] },
