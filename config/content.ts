@@ -77,10 +77,7 @@ export interface PrincipleStation extends StationBase {
   text: string;
 }
 /** Inline illustration chosen by content (not by theme). */
-export type FeatureVisual = 'dot-sphere' | 'dot-plane' | 'waveform' | 'spectrum' | 'amp' | 'blob' | 'objects-3d' | 'blur-blobs' | 'none';
-
-/** 1 learning · 2 working knowledge · 3 proficient · 4 advanced · 5 expert */
-export type SkillLevel = 1 | 2 | 3 | 4 | 5;
+export type FeatureVisual = 'dot-sphere' | 'dot-plane' | 'waveform' | 'spectrum' | 'amp' | 'blob' | 'objects-3d' | 'blur-blobs' | 'guitar' | 'none';
 
 /** Generic "title + text + tags + visual" card — used by the themed chapters. */
 export interface FeatureStation extends StationBase {
@@ -89,8 +86,8 @@ export interface FeatureStation extends StationBase {
   text: string;
   tags?: string[];
   visual?: FeatureVisual;
-  /** Technologies with a proficiency meter. */
-  skills?: { name: string; level: SkillLevel }[];
+  /** Technologies and the projects (station ids) they were used in. */
+  skills?: { name: string; projects: string[] }[];
 }
 export interface ContactStation extends StationBase {
   kind: 'contact';
@@ -160,6 +157,8 @@ export interface WanderConfig {
   chapterLead: number;
   /** Random candidates tried per station (more = better fits, slower build). */
   candidates: number;
+  /** Cards taller than this sit beside a vertical run (left/right), never above/below a horizontal one — the rider stays in view. */
+  tallCard: number;
 }
 
 /** Reading time: extra scroll distance per station during which the rider barely moves. */
@@ -272,6 +271,7 @@ export const railLayout: {
       cardSpacing: 48,
       chapterLead: 700,
       candidates: 64,
+      tallCard: 400,
     },
     curves: { radius: 280, amplitude: 46, wavelength: 900 },
     dwell: { enabled: false, base: 0, perChar: 0, min: 0, max: 0, creep: 1 },
@@ -300,10 +300,11 @@ export const railLayout: {
       cardSpacing: 300,
       chapterLead: 900,
       candidates: 64,
+      tallCard: Infinity, // mobile: cards open in the screen-fixed panel, not beside the rail
     },
     curves: { radius: 340, amplitude: 70, wavelength: 1100 },
-    dwell: { enabled: true, base: 140, perChar: 0.45, min: 160, max: 700, creep: 0.22 },
-    stop: { brake: 180, release: 150, creep: 0.22, snap: false },
+    dwell: { enabled: true, base: 140, perChar: 0.45, min: 160, max: 700, creep: 0.3 },
+    stop: { brake: 150, release: 120, creep: 0.3, snap: false },
   },
 };
 
@@ -426,11 +427,10 @@ export const chapters: Chapter[] = [
         title: 'Real-time 3D that stays fast',
         text: 'Scroll-driven scenes, point clouds and custom shaders — shipped with lazy-loaded scenes, capped pixel ratio and render-on-demand loops, so the page keeps 60 fps on phones.',
         skills: [
-          { name: 'Three.js', level: 4 },
-          { name: 'React Three Fiber', level: 4 },
-          { name: 'GLSL shaders', level: 3 },
-          { name: 'Spline', level: 4 },
-          { name: 'WebGL performance', level: 4 },
+          { name: 'Three.js', projects: ['project-brumberg', 'project-foam'] },
+          { name: 'React Three Fiber', projects: ['project-alevtyna'] },
+          { name: 'Spline', projects: ['project-brumberg'] },
+          { name: '3D audio scenes', projects: ['project-foam'] },
         ],
       },
       {
@@ -468,15 +468,15 @@ export const chapters: Chapter[] = [
         id: 'audio-tech',
         kind: 'feature',
         size: 'md',
-        visual: 'waveform',
-        title: 'Sound in the browser',
-        text: 'Synths, mixers and generative scores on the Web Audio API — synthesis, sample-accurate scheduling, music theory, spatial audio and the visuals that go with them.',
+        visual: 'guitar',
+        title: 'A musician who codes',
+        text: 'I play guitar, so sound is not an abstraction to me: tone, dynamics, harmony, mixing and the feel of an instrument under the fingers. That ear goes into every audio interface I build — synths, mixers and generative scores on the Web Audio API.',
         skills: [
-          { name: 'Web Audio API', level: 4 },
-          { name: 'Tone.js', level: 5 },
-          { name: 'Tonal.js', level: 3 },
-          { name: 'Resonance Audio', level: 3 },
-          { name: 'Audio visualisation', level: 4 },
+          { name: 'Web Audio API', projects: ['project-sonicdesk', 'project-foam'] },
+          { name: 'Tone.js', projects: ['project-sonicdesk', 'project-tower', 'project-mono', 'project-foam'] },
+          { name: 'Tonal.js', projects: ['project-tower'] },
+          { name: 'Resonance Audio', projects: ['project-foam'] },
+          { name: 'Svelte', projects: ['project-mono'] },
         ],
       },
       {
@@ -530,11 +530,9 @@ export const chapters: Chapter[] = [
         title: 'Built for people',
         text: 'Accessible, calm interfaces from the first sketch: semantic structure, keyboard paths, readable type and motion that respects the person using it.',
         skills: [
-          { name: 'WCAG 2.2 / ARIA', level: 4 },
-          { name: 'Semantic HTML & keyboard UX', level: 5 },
-          { name: 'Screen-reader testing', level: 3 },
-          { name: 'Reduced-motion & neuro-inclusive UI', level: 4 },
-          { name: 'UX research & usability tests', level: 3 },
+          { name: 'Accessible, neuro-inclusive UI', projects: ['project-alevtyna'] },
+          { name: 'Astro Islands', projects: ['project-alevtyna'] },
+          { name: 'Framer Motion', projects: ['project-alevtyna', 'project-vortex'] },
         ],
       },
       {

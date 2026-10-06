@@ -256,11 +256,10 @@ body {
   opacity: var(--t-tex-halftone);
   /* paper grain + offset halftone rows; every period divides 44px so camera wrap is seamless */
   background-image:
-    url("/textures/grain-44.png"), /* static, pre-baked grain tile (was a live feTurbulence SVG) */
     radial-gradient(circle, var(--t-texture) 1.3px, transparent 1.7px),
     radial-gradient(circle, var(--t-texture) 1.3px, transparent 1.7px);
-  background-size: 44px 44px, 11px 11px, 11px 11px;
-  background-position: 0 0, 0 0, 5.5px 5.5px;
+  background-size: 11px 11px, 11px 11px;
+  background-position: 0 0, 5.5px 5.5px;
 }
 .tex-scanlines {
   opacity: var(--t-tex-scanlines);
@@ -347,15 +346,6 @@ body {
 }
 .tape-1 { left: 3%; top: 76px; rotate: -8deg; }
 .tape-2 { right: 4%; bottom: 112px; rotate: 6deg; background: color-mix(in oklch, var(--t-accent-1) 45%, transparent); }
-.xerox {
-  position: absolute;
-  right: 10%;
-  top: 18%;
-  width: 220px;
-  height: 160px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, color-mix(in oklch, var(--t-fg) 14%, transparent), transparent);
-}
 .zine-star { position: absolute; width: 34px; height: 34px; }
 .zine-star polygon { fill: var(--t-accent-3); stroke: var(--t-fg); stroke-width: 2.5; stroke-linejoin: round; }
 .zine-star-1 { left: 7%; top: 40%; rotate: 12deg; }
@@ -391,7 +381,7 @@ body {
 .soft-blob-3 { left: 20%; bottom: -26vmax; background: radial-gradient(closest-side, var(--t-accent-3), transparent); }
 
 @media (max-width: 767px) {
-  .poster-meta, .box-x, .xerox, .zine-circled, .zine-scribble { display: none; }
+  .poster-meta, .box-x, .zine-circled, .zine-scribble { display: none; }
 }
 
 /* ───────────── stations (rail view) */
@@ -414,9 +404,10 @@ body {
 .station.unplaced { visibility: hidden; }
 .station .card { contain: layout style; }
 @media (min-width: 768px) {
-  .station[data-size="sm"] { width: 400px; }
-  .station[data-size="md"] { width: 520px; }
-  .station[data-size="lg"] { width: 620px; }
+  /* wide rather than tall: a card must fit the screen beside the rider */
+  .station[data-size="sm"] { width: 420px; }
+  .station[data-size="md"] { width: 580px; }
+  .station[data-size="lg"] { width: 640px; }
 }
 
 /* Reveal style is pure tokens: hidden transform, transition easing, keyframe name. */
@@ -611,18 +602,6 @@ body {
    One full-screen world: rider pinned bottom-centre, station panels open
    above their markers. Sizes come from config/content.ts → mobileLayout /
    railLayout.mobile.camera (as --m-* vars on the stage). svh only. */
-
-/* proficiency meter: 5 squares, filled up to the level */
-.skill-meter { display: inline-flex; gap: 3px; flex: none; }
-.skill-meter > span {
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid var(--t-fg);
-  border-radius: calc(var(--t-radius) * 0.15);
-}
-.skill-meter > span[data-on] { background: var(--t-accent-3); }
-[data-theme="dark3d"] .skill-meter > span[data-on],
-.theme-dark3d .skill-meter > span[data-on] { background: var(--t-fg); }
 
 /* 3D feature figure: CSS 3D wireframes (compositor-only transforms, no WebGL) */
 .obj3d-stage {

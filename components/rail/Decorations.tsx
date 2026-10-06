@@ -35,7 +35,6 @@ export const Decorations = memo(function Decorations({ engine }: { engine: RailE
       <div ref={engine.bindLayer('deco', 'audio')} className="deco deco-audio">
         <span className="tape tape-1" />
         <span className="tape tape-2" />
-        <span className="xerox" />
         <svg className="zine-star zine-star-1" viewBox="0 0 40 40">
           <polygon points="20,2 25,15 39,15 28,24 32,38 20,29 8,38 12,24 1,15 15,15" />
         </svg>

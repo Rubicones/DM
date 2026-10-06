@@ -70,8 +70,15 @@ export type SceneTicker = (now: number, dt: number) => boolean;
 type StationState = 'hidden' | 'active' | 'passed';
 type Listener<T> = (v: T) => void;
 
-const PROGRESS_LERP = 0.14;
-const CAMERA_LERP = 0.16;
+/** Per-frame catch-up toward the scroll position. Touch scrolling is already smooth (native
+ * momentum) → near-direct; wheels step in notches → a little smoothing. */
+const PROGRESS_LERP_TOUCH = 0.6;
+const PROGRESS_LERP_WHEEL = 0.32;
+/** Camera catch-up (desktop framing shifts between stations). Mobile: locked to the rider. */
+const CAMERA_LERP = 0.3;
+/** Desktop: the rider never comes closer than this to the screen edges (top bar / HUD ≈ 60px + room). */
+const RIDER_SAFE_Y = 120;
+const RIDER_SAFE_X = 80;
 /** All textures share this cell size so the camera offset modulo works for each. */
 export const TEXTURE_CELL = 44;
 /** Scene stays mounted this far (progress) before its chapter, to preload + compile shaders. */
@@ -577,7 +584,7 @@ export class RailEngine {
         this.spikeHeld = false;
         this.target = raw;
       }
-      const kp = 1 - Math.pow(1 - PROGRESS_LERP, f);
+      const kp = 1 - Math.pow(1 - (IS_TOUCH ? PROGRESS_LERP_TOUCH : PROGRESS_LERP_WHEEL), f);
       this.current += (this.target - this.current) * kp;
       if (Math.abs(this.target - this.current) * geo.total < 0.25) this.current = this.target;
       const len = this.current * geo.total;
@@ -596,14 +603,22 @@ export class RailEngine {
       const kl = 1 - Math.pow(1 - 0.06, f);
       this.look.x += ((dxT / dl) * reach - this.look.x) * kl;
       this.look.y += ((dyT / dl) * reach - this.look.y) * kl;
-      const tx = p.x + frame.x + this.look.x;
-      const ty = p.y + frame.y + this.look.y;
+      let tx = p.x + frame.x + this.look.x;
+      let ty = p.y + frame.y + this.look.y;
+      if (geo.mode === 'desktop') {
+        // a card taller than the screen must never frame the rider out of view:
+        // the rider's screen position stays inside the band between the bars
+        const my = Math.min(RIDER_SAFE_Y, this.vh * 0.25);
+        const mx = Math.min(RIDER_SAFE_X, this.vw * 0.25);
+        ty = clamp(ty, p.y - (this.vh * (1 - L.camera.y) - my), p.y + (this.vh * L.camera.y - my));
+        tx = clamp(tx, p.x - (this.vw * (1 - L.camera.x) - mx), p.x + (this.vw * L.camera.x - mx));
+      }
       if (!this.camReady) {
         this.cam.x = tx;
         this.cam.y = ty;
         this.camReady = true;
       } else {
-        const kc = 1 - Math.pow(1 - CAMERA_LERP, f);
+        const kc = geo.mode === 'mobile' ? 1 : 1 - Math.pow(1 - CAMERA_LERP, f);
         this.cam.x += (tx - this.cam.x) * kc;
         this.cam.y += (ty - this.cam.y) * kc;
       }

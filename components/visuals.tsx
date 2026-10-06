@@ -89,7 +89,7 @@ const STAR = (cx: number, cy: number, R: number) => {
 
 function Frame({ children, label, seed = 11 }: { children: React.ReactNode; label?: string; seed?: number }) {
   return (
-    <div className="visual relative aspect-[16/7] w-full overflow-hidden" aria-hidden>
+    <div className="visual relative aspect-[16/7] w-full overflow-hidden md:aspect-[16/5]" aria-hidden>
       <SketchOutline seed={seed} />
       {label && <span className="t-label absolute left-3 top-3 text-[10px] text-muted">{label}</span>}
       {children}
@@ -207,6 +207,45 @@ export function Visual({ kind, label }: { kind: FeatureVisual; label?: string })
             <span className="bb bb-3" />
             <span className="bb bb-4" />
           </div>
+        </Frame>
+      );
+    case 'guitar':
+      return (
+        <Frame label={label}>
+          <svg viewBox="0 0 400 175" className="h-full w-full" preserveAspectRatio="xMidYMid meet">
+            <g stroke="var(--t-fg)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+              {/* sound coming off the strings */}
+              <path d="M178 46 c 9 -13 18 13 27 0 s 18 13 27 0 s 18 13 27 0 s 18 13 27 0" fill="none" stroke="var(--t-accent-2)" strokeWidth={3} />
+              <path d="M196 132 c 7 -9 14 9 21 0 s 14 9 21 0 s 14 9 21 0" fill="none" stroke="var(--t-accent-3)" strokeWidth={2.4} opacity={0.8} />
+              {/* body, pickguard */}
+              <path
+                d="M42 70 C 30 40, 72 28, 97 47 C 112 58, 126 52, 141 45 C 154 40, 162 52, 152 66 C 147 74, 147 102, 152 110 C 162 124, 154 136, 141 131 C 126 125, 112 119, 97 130 C 72 148, 30 138, 42 106 C 46 96, 46 80, 42 70 Z"
+                fill="var(--t-accent-3)"
+              />
+              <path d="M84 62 C 104 56, 128 62, 134 74 L 134 104 C 120 116, 100 118, 84 112 C 76 100, 76 74, 84 62 Z" fill="var(--t-card-bg)" />
+              {/* neck, frets, headstock */}
+              <path d="M146 81 L 322 82 L 322 95 L 146 96 Z" fill="var(--t-accent-1)" />
+              {[170, 192, 212, 231, 249, 266, 282, 297, 311].map((x) => (
+                <path key={x} d={`M${x} 82 L${x} 95`} strokeWidth={1.4} />
+              ))}
+              <path d="M320 80 L 374 72 C 384 71, 388 78, 383 84 L 374 101 L 320 97 Z" fill="var(--t-card-bg)" />
+              {[334, 348, 362].map((x) => (
+                <circle key={x} cx={x} cy={70 - (x - 334) * 0.12} r={3.4} fill="var(--t-fg)" />
+              ))}
+              {/* pickups, bridge, knobs */}
+              <rect x={98} y={77} width={8} height={22} fill="var(--t-fg)" />
+              <rect x={116} y={77} width={8} height={22} fill="var(--t-fg)" />
+              <rect x={66} y={78} width={10} height={20} fill="var(--t-card-bg)" />
+              <circle cx={74} cy={122} r={5} fill="var(--t-card-bg)" />
+              <circle cx={90} cy={128} r={5} fill="var(--t-card-bg)" />
+            </g>
+            {/* strings */}
+            <g stroke="var(--t-fg)" strokeWidth={0.9} opacity={0.85}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <path key={i} d={`M71 ${80.5 + i * 3} L 322 ${83 + i * 2.2} L ${378 - i * 2} ${76 + i * 4}`} fill="none" />
+              ))}
+            </g>
+          </svg>
         </Frame>
       );
     case 'none':
