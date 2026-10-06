@@ -348,42 +348,36 @@ body {
   text-transform: uppercase;
   color: var(--t-fg);
 }
-/* glossy orange-red record key in a grey bezel, its LED breathing */
+/* flat TE record key: solid orange, small radius, printed label, status LED */
 .te-rec {
   position: absolute;
-  right: 44px;
-  top: 82px;
-  display: grid;
-  justify-items: center;
-  gap: 8px;
+  right: 40px;
+  top: 84px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.te-rec-led {
+  width: 6px;
+  height: 6px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--t-accent-1);
 }
 .te-rec-key {
-  position: relative;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 36% 30%, #FF9A70 0 8%, #FF5A1F 38%, #D93A0B 100%);
-  box-shadow: 0 0 0 5px #CFCEC9, 0 0 0 6px #B3B2AD, 0 4px 10px 4px rgb(29 29 27 / 0.25);
-}
-/* LED glow: opacity-only pulse (composited, no repaint) */
-.te-rec-key::after {
-  content: "";
-  position: absolute;
-  inset: -26px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgb(255 90 31 / 0.45), transparent);
-  animation: te-rec-glow 2.4s ease-in-out infinite;
-  z-index: -1;
-}
-@keyframes te-rec-glow {
-  50% { opacity: 0.35; }
-}
-.te-rec-label {
+  display: block;
+  width: 64px;
+  height: 64px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--t-accent-1);
+  box-shadow: 0 2px 0 #C7400F;
   font-family: var(--t-font-mono);
   font-size: 9px;
-  letter-spacing: 0.18em;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--t-muted);
+  color: var(--t-fg);
 }
 /* small dark display, orange segments */
 .te-lcd {
@@ -1062,7 +1056,6 @@ html.rail-snap { scroll-snap-type: y proximity; }
   .m-panel-inner,
   .obj3d-spin,
   .bb,
-  .te-rec-key::after,
   .soft-blob,
   .m-marker-dot,
   .m-sheet,

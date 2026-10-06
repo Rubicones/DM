@@ -118,7 +118,8 @@ export function MobileRail({ engine, geo, sound, onToggleView, introAction }: Pr
       {/* WORLD — rail, markers, rider; the camera pins the rider bottom-centre. */}
       <div ref={engine.bind('world')} className="world absolute left-0 top-0">
         <RailSvg geo={geo} engine={engine} />
-        {geo.stations.map((st) => (
+        {/* no marker at the very start of the path (the intro has no stop of its own) */}
+        {geo.stations.slice(1).map((st) => (
           // decorative shortcut (the panels themselves are the accessible content)
           <button
             key={st.id}

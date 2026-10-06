@@ -35,8 +35,8 @@ export const Decorations = memo(function Decorations({ engine }: { engine: RailE
       <div ref={engine.bindLayer('deco', 'audio')} className="deco deco-audio">
         <span className="te-label">Rubicon</span>
         <span className="te-rec">
-          <span className="te-rec-key" />
-          <span className="te-rec-label">rec</span>
+          <span className="te-rec-led" />
+          <span className="te-rec-key">record</span>
         </span>
         <div className="te-lcd">
           <span className="te-lcd-bar">bar</span>
