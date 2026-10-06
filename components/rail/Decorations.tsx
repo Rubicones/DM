@@ -31,33 +31,29 @@ export const Decorations = memo(function Decorations({ engine }: { engine: RailE
         </div>
       </div>
 
-      {/* Audio — gig-poster zine: tape, stars, scribbles, circled word, xerox smudge */}
+      {/* Audio — Teenage Engineering-style instrument: product label, record key, LCD */}
       <div ref={engine.bindLayer('deco', 'audio')} className="deco deco-audio">
-        <span className="tape tape-1" />
-        <span className="tape tape-2" />
-        <svg className="zine-star zine-star-1" viewBox="0 0 40 40">
-          <polygon points="20,2 25,15 39,15 28,24 32,38 20,29 8,38 12,24 1,15 15,15" />
-        </svg>
-        <svg className="zine-star zine-star-2" viewBox="0 0 40 40">
-          <polygon points="20,2 25,15 39,15 28,24 32,38 20,29 8,38 12,24 1,15 15,15" />
-        </svg>
-        <svg className="zine-scribble" viewBox="0 0 160 60" fill="none">
-          <path d="M6 44 C 30 10, 60 54, 84 26 S 128 8, 142 30" />
-          <path d="M130 20 L 144 31 L 128 38" />
-        </svg>
-        <div className="zine-circled">
-          <span>live!</span>
-          <svg viewBox="0 0 120 60" fill="none">
-            <path d="M14 34 C 10 12, 104 6, 110 28 C 116 50, 22 58, 12 36 C 8 26, 40 14, 70 16" />
-          </svg>
+        <span className="te-label">Rubicon</span>
+        <span className="te-rec">
+          <span className="te-rec-key" />
+          <span className="te-rec-label">rec</span>
+        </span>
+        <div className="te-lcd">
+          <span className="te-lcd-bar">bar</span>
+          <span className="te-lcd-num">120.0</span>
+          <span className="te-lcd-rec" />
+          <span className="te-lcd-play" />
+          <span className="te-lcd-fx">fx</span>
         </div>
       </div>
 
-      {/* Human-first — soft pastel fields */}
+      {/* Human-first — large soft colour blooms, drifting slowly */}
       <div ref={engine.bindLayer('deco', 'human')} className="deco deco-human">
         <span className="soft-blob soft-blob-1" />
         <span className="soft-blob soft-blob-2" />
         <span className="soft-blob soft-blob-3" />
+        <span className="soft-blob soft-blob-4" />
+        <span className="soft-blob soft-blob-5" />
       </div>
     </div>
   );

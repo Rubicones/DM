@@ -78,6 +78,8 @@ const PROGRESS_LERP_WHEEL = 0.32;
 const CAMERA_LERP = 0.3;
 /** Desktop: the rider never comes closer than this to the screen edges (top bar / HUD ≈ 60px + room). */
 const RIDER_SAFE_Y = 120;
+/** A theme cross-fade takes at most this share of the gap between two chapters' cards. */
+const BLEND_SHARE = 0.4;
 const RIDER_SAFE_X = 80;
 /** All textures share this cell size so the camera offset modulo works for each. */
 export const TEXTURE_CELL = 44;
@@ -85,7 +87,8 @@ export const TEXTURE_CELL = 44;
 const SCENE_PRELOAD = 0.1;
 const S_PROGRESS = 0, S_CAMERA = 1, S_RAIL = 2, S_STATIONS = 3, S_THEME = 4, S_3D = 5, S_SOUND = 6;
 
-interface Boundary { at: number; from: ThemeId; to: ThemeId }
+/** Theme cross-fade between two chapters: centre + half-width in progress units. */
+interface Boundary { at: number; half: number; from: ThemeId; to: ThemeId }
 const IS_TOUCH = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 
 export class RailEngine {
@@ -154,6 +157,7 @@ export class RailEngine {
 
   // theme blending
   private boundaries: Boundary[] = [];
+  private waveAmp: number[] = [];
   private blendKey = '';
   private readonly varCache = new Map<string, string>();
   private readout = 'coords';
@@ -345,11 +349,32 @@ export class RailEngine {
     this.chunkState = new Int8Array(geo.chunks.length).fill(9);
     this.curChunk = -1;
     this.lastMask = -1;
+    // Cross-fades sit midway between the last card of one chapter and the first card of
+    // the next, never wider than a fraction of that gap → a card never shows mid-blend.
+    // sine amplitude per chapter in world px (camera strips the wave off the rider position)
+    this.waveAmp = geo.chapters.map((c) => {
+      const cfg = chapterConfig[c.index];
+      if (!cfg || themes[cfg.theme].rail.geometry !== 'sine') return 0;
+      return (cfg.geometry?.[geo.mode]?.amplitude ?? railLayout[geo.mode].curves.amplitude) * railLayout[geo.mode].worldScale;
+    });
     this.boundaries = [];
+    const maxHalf = railLayout.transitionZone / 2;
     for (let i = 1; i < geo.chapters.length; i++) {
       const a = geo.chapters[i - 1];
       const b = geo.chapters[i];
-      if (a.theme !== b.theme) this.boundaries.push({ at: b.startProgress, from: a.theme, to: b.theme });
+      if (a.theme === b.theme) continue;
+      let prev = -1;
+      let next = -1;
+      for (let k = 0; k < S.length; k++) {
+        if (S[k].chapterIndex === i - 1) prev = k;
+        if (S[k].chapterIndex === i && next < 0) next = k;
+      }
+      if (prev >= 0 && next >= 0) {
+        // the previous card stays readable through its reading dwell (mobile)
+        const p0 = (S[prev].len + S[prev].dwellLen) / geo.total;
+        const p1 = S[next].progress;
+        this.boundaries.push({ at: (p0 + p1) / 2, half: Math.min(maxHalf, Math.max(1e-4, (p1 - p0) * BLEND_SHARE)), from: a.theme, to: b.theme });
+      } else this.boundaries.push({ at: b.startProgress, half: maxHalf, from: a.theme, to: b.theme });
     }
     this.measure();
     if (geo.complete && wasComplete) {
@@ -603,8 +628,14 @@ export class RailEngine {
       const kl = 1 - Math.pow(1 - 0.06, f);
       this.look.x += ((dxT / dl) * reach - this.look.x) * kl;
       this.look.y += ((dyT / dl) * reach - this.look.y) * kl;
-      let tx = p.x + frame.x + this.look.x;
-      let ty = p.y + frame.y + this.look.y;
+      // aim at the wave's centre line, not the rider: final point = base + normal·A·w,
+      // with the base direction taken over ±60px (several wavelengths) → no shake from the sine
+      const amp = this.waveAmp[this.chapterIdx] ?? 0;
+      const off = amp * this.s.wave;
+      const cx = p.x + (dyT / dl) * off;
+      const cy = p.y - (dxT / dl) * off;
+      let tx = cx + frame.x + this.look.x;
+      let ty = cy + frame.y + this.look.y;
       if (geo.mode === 'desktop') {
         // a card taller than the screen must never frame the rider out of view:
         // the rider's screen position stays inside the band between the bars
@@ -618,6 +649,7 @@ export class RailEngine {
         this.cam.y = ty;
         this.camReady = true;
       } else {
+        // mobile: locked to the (wave-free) centre line — the rider wiggles around the pinned spot
         const kc = geo.mode === 'mobile' ? 1 : 1 - Math.pow(1 - CAMERA_LERP, f);
         this.cam.x += (tx - this.cam.x) * kc;
         this.cam.y += (ty - this.cam.y) * kc;
@@ -884,20 +916,25 @@ export class RailEngine {
     const stage = d.stage;
     if (!stage || this.chapterIdx < 0) return;
     const q = quality.preset;
-    const half = railLayout.transitionZone / 2;
     const p = this.current;
 
-    let from: ThemeId = chapterConfig[this.chapterIdx]?.theme ?? chapterConfig[0].theme;
+    // outside a cross-fade the theme is the one after the last boundary passed
+    // (not the chapter index: chapters start before their cross-fade ends)
+    let from: ThemeId = chapterConfig[0].theme;
     let to: ThemeId = from;
     let t = 0;
     for (let i = 0; i < this.boundaries.length; i++) {
       const b = this.boundaries[i];
-      if (p > b.at - half && p < b.at + half) {
+      if (p >= b.at + b.half) {
+        from = to = b.to;
+        continue;
+      }
+      if (p > b.at - b.half) {
         from = b.from;
         to = b.to;
-        t = (p - (b.at - half)) / (2 * half);
-        break;
+        t = (p - (b.at - b.half)) / (2 * b.half);
       }
+      break;
     }
     // cheap early-out (no string building) when nothing changed since last frame
     const step = from === to ? 0 : Math.round(t * q.themeSteps);

@@ -118,6 +118,8 @@ export interface ChapterGeometry {
   amplitude: number;
   /** sine: full period, px of arc length. */
   wavelength: number;
+  /** sine: also run the wave past the stations (default: straight beside each card). For small amplitudes. */
+  continuous: boolean;
 }
 
 export interface Chapter {
@@ -269,11 +271,11 @@ export const railLayout: {
       railClearance: 120,
       cardClearance: 56,
       cardSpacing: 48,
-      chapterLead: 700,
+      chapterLead: 1300,
       candidates: 64,
       tallCard: 400,
     },
-    curves: { radius: 280, amplitude: 46, wavelength: 900 },
+    curves: { radius: 280, amplitude: 46, wavelength: 900, continuous: false },
     dwell: { enabled: false, base: 0, perChar: 0, min: 0, max: 0, creep: 1 },
     stop: { brake: 160, release: 140, creep: 0.7, snap: false },
   },
@@ -298,11 +300,11 @@ export const railLayout: {
       railClearance: 220,
       cardClearance: 120,
       cardSpacing: 300,
-      chapterLead: 900,
+      chapterLead: 1400,
       candidates: 64,
       tallCard: Infinity, // mobile: cards open in the screen-fixed panel, not beside the rail
     },
-    curves: { radius: 340, amplitude: 70, wavelength: 1100 },
+    curves: { radius: 340, amplitude: 70, wavelength: 1100, continuous: false },
     dwell: { enabled: true, base: 140, perChar: 0.45, min: 160, max: 700, creep: 0.3 },
     stop: { brake: 150, release: 120, creep: 0.3, snap: false },
   },
@@ -463,6 +465,8 @@ export const chapters: Chapter[] = [
     id: 'audio',
     title: 'Audio',
     theme: 'audio',
+    // tight, low-amplitude wave — reads like a coiled instrument cable
+    geometry: { desktop: { amplitude: 15, wavelength: 52, continuous: true }, mobile: { amplitude: 22, wavelength: 65, continuous: true } },
     stations: [
       {
         id: 'audio-tech',

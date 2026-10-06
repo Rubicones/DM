@@ -10,11 +10,10 @@ import {
   Atkinson_Hyperlegible,
   Fraunces,
   Inter_Tight,
+  DM_Mono,
   JetBrains_Mono,
-  Permanent_Marker,
-  DM_Sans,
+  Outfit,
   Space_Grotesk,
-  Special_Elite,
 } from 'next/font/google';
 
 // brutalist — preloaded
@@ -23,12 +22,11 @@ export const grotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-spa
 export const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono', display: 'swap' });
 // dark3d
 export const interTight = Inter_Tight({ subsets: ['latin'], variable: '--font-inter-tight', display: 'swap', preload: false });
-// audio (gig poster)
-export const marker = Permanent_Marker({ weight: '400', subsets: ['latin'], variable: '--font-permanent-marker', display: 'swap', preload: false });
-export const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans', display: 'swap', preload: false });
-export const typewriter = Special_Elite({ weight: '400', subsets: ['latin'], variable: '--font-special-elite', display: 'swap', preload: false });
+// audio (Teenage Engineering-style): thin geometric display, mono panel labels; body reuses Inter Tight
+export const outfit = Outfit({ weight: ['300', '400'], subsets: ['latin'], variable: '--font-outfit', display: 'swap', preload: false });
+export const dmMono = DM_Mono({ weight: ['400', '500'], subsets: ['latin'], variable: '--font-dm-mono', display: 'swap', preload: false });
 // human-first
 export const atkinson = Atkinson_Hyperlegible({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-atkinson', display: 'swap', preload: false });
 export const fraunces = Fraunces({ subsets: ['latin'], axes: ['SOFT', 'WONK', 'opsz'], variable: '--font-fraunces', display: 'swap', preload: false });
 
-export const fontVariables = [archivo, grotesk, mono, interTight, marker, dmSans, typewriter, atkinson, fraunces].map((f) => f.variable).join(' ');
+export const fontVariables = [archivo, grotesk, mono, interTight, outfit, dmMono, atkinson, fraunces].map((f) => f.variable).join(' ');
