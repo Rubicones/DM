@@ -531,7 +531,7 @@ export const themes: Record<ThemeId, Theme> = {
       onAccent1: '#2B2733',
       onAccent2: '#2B2733',
       onAccent3: '#2B2733',
-      cardBg: 'rgba(255, 252, 247, 0.78)',
+      cardBg: 'rgba(255, 252, 247, 0.93)',
       border: 'rgba(255, 255, 255, 0.85)',
       rule: 'rgba(43, 39, 51, 0.08)',
       texture: 'rgba(43, 39, 51, 0.04)',
