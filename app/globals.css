@@ -779,7 +779,23 @@ html.rail-snap .rail-scroller { scroll-snap-type: y proximity; }
 .journey-btn:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--t-fg); }
 .journey-btn:active { transform: translate(4px, 4px); box-shadow: 2px 2px 0 var(--t-fg); }
 .journey-btn:focus-visible { outline: 3px solid var(--t-accent-2); outline-offset: 4px; }
-.stage:not([data-journey="idle"]) .journey-btn { opacity: 0; visibility: hidden; pointer-events: none; }
+.journey-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; }
+/* deliberately boring: flat grey, smaller, no shadow */
+.journey-plain {
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 11px;
+  color: #5C5C57;
+  background: #DAD9D4;
+  border: 1px solid #C4C3BE;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.journey-plain:hover { background: #D0CFCA; }
+.journey-plain:focus-visible { outline: 2px solid var(--t-fg); outline-offset: 3px; }
+.stage:not([data-journey="idle"]) .journey-actions { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 200ms ease-out; }
+.skill-link { cursor: pointer; text-decoration: none; }
+.skill-link:hover { filter: brightness(1.15); }
 .stage[data-journey="idle"] .intro-hint,
 .stage[data-journey="jumping"] .intro-hint { visibility: hidden; }
 /* the full stop has jumped onto the rail; the rider appears when it lands */

@@ -332,7 +332,7 @@ export const chapters: Chapter[] = [
         id: 'intro',
         kind: 'intro',
         size: 'lg',
-        eyebrow: 'Independent design engineer',
+        eyebrow: 'Independent Web Engineer',
         name: 'Dmitriy Popov',
         role: ['Creative UI/UX &', 'High-Performance Frontend'],
         tagline: 'Human-centered design. Engineered to perform.',
@@ -458,7 +458,7 @@ export const chapters: Chapter[] = [
         description:
           'Foam is a browser-based acoustic simulation platform that bridges the gap between theoretical spatial audio physics and practical sound production. Designed for sound engineers, producers, and students, the platform allows users to visualize and manipulate sound propagation in a 3D environment with high precision.',
         stack: ['Next.js', 'Supabase', 'Three.js', 'Tone.js', 'Resonance Audio'],
-        link: { label: '[PROJECT LINK]', href: '#' },
+        link: { label: 'foamacoustic.app', href: 'https://foamacoustic.app/' },
         color: '#ffffff',
       },
     ],
@@ -506,7 +506,7 @@ export const chapters: Chapter[] = [
         description:
           'A browser-based relaxation app that layers archival NASA mission and air-traffic-control radio under a generative ambient score. The aesthetic is a late-night airport: quiet, procedural, never quite silent. Built with Next.js and TypeScript, with a custom audio engine on Tone.js and Tonal.js.',
         stack: ['Next.js', 'TypeScript', 'Tone.js', 'Tonal.js'],
-        link: { label: '[PROJECT LINK]', href: '#' },
+        link: { label: 'tower.rubicones.dev', href: 'https://tower.rubicones.dev/' },
         color: '#0e1728',
       },
       {
@@ -518,7 +518,7 @@ export const chapters: Chapter[] = [
         description:
           'An ASCII-styled browser-based synthesizer that combines retro-inspired aesthetics with advanced sound design capabilities, allowing users to craft and visualize audio directly in their browser.',
         stack: ['Svelte', 'Tone.js', 'TypeScript'],
-        link: { label: 'mono-steel-xi.vercel.app', href: 'https://mono-steel-xi.vercel.app/' },
+        link: { label: 'mono.rubicones.dev', href: 'https://mono.rubicones.dev' },
         color: '#ffffff',
       },
     ],
@@ -601,12 +601,19 @@ export const chapters: Chapter[] = [
     title: 'Principles',
     theme: 'brutalist',
     stations: [
-      { id: 'principle-goals', kind: 'principle', size: 'sm', title: 'Goals before pixels', text: 'Every project starts with understanding what the product has to achieve — the visual language follows from that.' },
-      { id: 'principle-human', kind: 'principle', size: 'sm', title: 'Humanize the interface', text: 'Empathetic, tactile and calm over generic, AI-feeling patterns.' },
-      { id: 'principle-details', kind: 'principle', size: 'sm', title: 'Details are the product', text: 'Micro-interactions and small states are where trust is built.' },
-      { id: 'principle-perf', kind: 'principle', size: 'sm', title: 'Performance is a feature', text: 'Heavy visuals, 60fps, Lighthouse 100. Not a trade-off.' },
-      { id: 'principle-a11y', kind: 'principle', size: 'sm', title: 'Accessible by default', text: 'Neuro-inclusive, keyboard-friendly, readable. Comfortable for every user.' },
-      { id: 'principle-craft', kind: 'principle', size: 'sm', title: 'Design and code are one craft', text: 'I design what I can build, and build exactly what I designed.' },
+      {
+        id: 'principles-list',
+        kind: 'list',
+        size: 'lg',
+        title: 'Principles',
+        items: [
+          { title: 'Goals before pixels', text: 'Every project starts with understanding what the product has to achieve — the visual language follows from that.' },
+          { title: 'Humanize the interface', text: 'Empathetic, tactile and calm over generic, AI-feeling patterns.' },
+          { title: 'Details are the product', text: 'Micro-interactions and small states are where trust is built.' },
+          { title: 'Performance is a feature', text: 'Heavy visuals, 60fps, Lighthouse 100. Not a trade-off.' },
+          { title: 'Accessible by default', text: 'Neuro-inclusive, keyboard-friendly, readable. Comfortable for every user.' },
+        ],
+      },
     ],
   },
   {

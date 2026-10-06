@@ -19,6 +19,8 @@ interface Props {
   idSuffix?: string;
   /** Intro only: shown in place of the scroll hint until the journey starts (rail view's "Start journey"). */
   introAction?: ReactNode;
+  /** Rail view: move the rider to a station (project chips). Plain view: chips are in-page anchors. */
+  onGoTo?: (id: string) => void;
 }
 
 function CardHeader({ number, chapterTitle, right }: { number: number; chapterTitle: string; right?: string }) {
@@ -45,7 +47,7 @@ function Tags({ items, label, filledFirst }: { items: string[]; label: string; f
 }
 
 /** Technology → the projects it was used in (project titles from the content index). */
-function Skills({ items }: { items: NonNullable<FeatureStation['skills']> }) {
+function Skills({ items, onGoTo }: { items: NonNullable<FeatureStation['skills']>; onGoTo?: (id: string) => void }) {
   return (
     <dl className="t-divide t-rule-y mt-5">
       {items.map((k) => (
@@ -57,8 +59,21 @@ function Skills({ items }: { items: NonNullable<FeatureStation['skills']> }) {
               {k.projects.map((id) => {
                 const p = stationById.get(id)?.station;
                 return p ? (
-                  <li key={id} className="tag t-label px-1.5 py-0.5 text-[10px]">
-                    {p.kind === 'project' ? p.title : id}
+                  <li key={id}>
+                    <a
+                      href={`#${id}`}
+                      className="tag skill-link t-label inline-block px-1.5 py-0.5 text-[10px]"
+                      onClick={
+                        onGoTo
+                          ? (ev) => {
+                              ev.preventDefault();
+                              onGoTo(id);
+                            }
+                          : undefined
+                      }
+                    >
+                      {p.kind === 'project' ? p.title : id}
+                    </a>
                   </li>
                 ) : null;
               })}
@@ -109,7 +124,7 @@ function ProjectVisual({ p }: { p: ProjectStation }) {
   );
 }
 
-export function StationContent({ station: s, chapterTitle, number, local, idSuffix = '', introAction }: Props) {
+export function StationContent({ station: s, chapterTitle, number, local, idSuffix = '', introAction, onGoTo }: Props) {
   const titleId = `${s.id}-title${idSuffix}`;
   const counter = local.count > 1 ? `${pad(local.index)} / ${pad(local.count)}` : undefined;
 
@@ -258,7 +273,7 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
             {s.title}
           </h3>
           <p className="t-body mt-4">{s.text}</p>
-          {s.skills && s.skills.length > 0 && <Skills items={s.skills} />}
+          {s.skills && s.skills.length > 0 && <Skills items={s.skills} onGoTo={onGoTo} />}
           {s.tags && s.tags.length > 0 && (
             <div className="mt-5">
               <Tags items={s.tags} label="Tags" />

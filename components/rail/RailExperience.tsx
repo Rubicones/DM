@@ -138,17 +138,19 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
     setJourney('jumping');
     void landed.then(() => setJourney('done'));
   };
+  const idle = journey === 'idle';
   const startButton = (
-    <button
-      type="button"
-      className="journey-btn t-label"
-      onClick={startJourney}
-      tabIndex={journey === 'idle' ? 0 : -1}
-      aria-hidden={journey === 'idle' ? undefined : true}
-    >
-      Start journey <span aria-hidden>→</span>
-    </button>
+    <div className="journey-actions" aria-hidden={idle ? undefined : true}>
+      <button type="button" className="journey-btn t-label" onClick={startJourney} tabIndex={idle ? 0 : -1}>
+        Start journey <span aria-hidden>→</span>
+      </button>
+      <button type="button" className="journey-plain t-label" onClick={onToggleView} tabIndex={idle ? 0 : -1}>
+        Plain view (boring)
+      </button>
+    </div>
   );
+  // project chips in the themed chapters' cards → ride to that project
+  const goTo = (id: string) => engine.scrollToStation(id);
 
   // fetch the next chapters' theme fonts ahead of time (≈10% of progress before they appear)
   useEffect(
@@ -210,7 +212,7 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
 
         {mobile ? (
           <>
-            <MobileRail engine={engine} geo={geo} sound={sound} onToggleView={onToggleView} introAction={startButton} />
+            <MobileRail engine={engine} geo={geo} sound={sound} onToggleView={onToggleView} introAction={startButton} onGoTo={goTo} />
             <div ref={engine.bind('veil')} className="veil pointer-events-none absolute inset-0 bg-bg" style={{ opacity: 0 }} aria-hidden />
           </>
         ) : (
@@ -278,6 +280,7 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
                                 number={e.number}
                                 local={e.local}
                                 introAction={e.station.kind === 'intro' ? startButton : undefined}
+                                onGoTo={goTo}
                               />
                             </div>
                           </div>
