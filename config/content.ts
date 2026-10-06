@@ -59,9 +59,12 @@ export interface ProjectStation extends StationBase {
   description: string;
   stack: string[];
   link: { label: string; href: string };
-  /** Optional image path (in /public). Falls back to a generated placeholder. */
+  /** Optional image path (in /public). Falls back to the brand tile: `color` + icon. */
   image?: string;
-  accent: AccentKey;
+  /** Brand colour — background of the "Selected work" tile. */
+  color: string;
+  /** Optional icon path (in /public), shown inside the tile. Falls back to a square placeholder. */
+  icon?: string;
 }
 export interface StackStation extends StationBase {
   kind: 'stack';
@@ -379,18 +382,6 @@ export const chapters: Chapter[] = [
     theme: 'brutalist',
     stations: [
       {
-        id: 'project-sonicdesk',
-        kind: 'project',
-        size: 'md',
-        title: 'Sonicdesk',
-        type: 'Interactive Audio SaaS for Musicians',
-        description:
-          'An innovative "Git for music" workspace. Features a custom visual version-control tree, interactive audio mixer with visual diffs, and timeline-based comments tied to musical bars.',
-        stack: ['Next.js', 'Web Audio API', 'Tone.js', 'Motion', 'Supabase'],
-        link: { label: '[PROJECT LINK]', href: '#' },
-        accent: 'accent1',
-      },
-      {
         id: 'project-vortex',
         kind: 'project',
         size: 'md',
@@ -399,20 +390,8 @@ export const chapters: Chapter[] = [
         description:
           'A premium B2B platform for a crypto market maker. Features scroll-animated chronological timelines, dynamic data counters for business metrics, and ergonomic verification forms.',
         stack: ['Next.js', 'TypeScript', 'Tailwind CSS', 'Framer Motion', 'GSAP'],
-        link: { label: '[PROJECT LINK]', href: '#' },
-        accent: 'accent2',
-      },
-      {
-        id: 'project-alevtyna',
-        kind: 'project',
-        size: 'md',
-        title: 'Alevtyna Yakovleva',
-        type: 'Neuro-Inclusive Psychologist Website',
-        description:
-          'An empathetic, accessible landing page focusing on user psychological comfort. Features interactive 3D WebGL elements that react to scroll, built on Astro Islands architecture for 100% Lighthouse performance without sacrificing heavy visual graphics.',
-        stack: ['Astro', 'Three.js (R3F)', 'Tailwind CSS', 'Framer Motion'],
-        link: { label: '[PROJECT LINK]', href: '#' },
-        accent: 'accent3',
+        link: { label: 'vortex.foundation', href: 'https://vortex.foundation' },
+        color: '#91eb44',
       },
       {
         id: 'project-bakery',
@@ -423,20 +402,8 @@ export const chapters: Chapter[] = [
         description:
           'An end-to-end wholesale bakery platform. Features a reactive stateful catalog, dynamic cart calculation, regional logistics validation widget, custom admin dashboard, and Telegram bot integration for staff.',
         stack: ['Next.js', 'TypeScript', 'Tailwind CSS', 'Node.js'],
-        link: { label: '[PROJECT LINK]', href: '#' },
-        accent: 'accent1',
-      },
-      {
-        id: 'project-brumberg',
-        kind: 'project',
-        size: 'md',
-        title: 'Matvey Brumberg Portfolio',
-        type: 'High-Performance 3D/Motion Designer Portfolio',
-        description:
-          'A visually expressive portfolio built for heavy media assets. Features optimized media grids with lazy-loading, seamless multi-level infinite marquees, and interactive local-time widgets.',
-        stack: ['Next.js', 'Three.js', 'Spline', 'Tailwind CSS'],
-        link: { label: '[PROJECT LINK]', href: '#' },
-        accent: 'accent2',
+        link: { label: 'basicbakery.rs', href: 'https://basicbakery.rs' },
+        color: '#e3735a',
       },
     ],
   },
@@ -456,13 +423,28 @@ export const chapters: Chapter[] = [
         tags: ['Three.js', 'R3F', 'GLSL', 'Spline'],
       },
       {
-        id: 'webgl-project',
-        kind: 'feature',
+        id: 'project-brumberg',
+        kind: 'project',
         size: 'md',
-        visual: 'dot-plane',
-        title: '[PLACEHOLDER] 3D project title',
-        text: '[PLACEHOLDER] One or two lines about a 3D project — what it does, why the third dimension matters there.',
-        tags: ['[STACK]', '[STACK]'],
+        title: 'Matvei Brumberg Portfolio',
+        type: 'High-Performance 3D/Motion Designer Portfolio',
+        description:
+          'A visually expressive portfolio built for heavy media assets. Features optimized media grids with lazy-loading, seamless multi-level infinite marquees, and interactive local-time widgets.',
+        stack: ['Next.js', 'Three.js', 'Spline', 'Tailwind CSS'],
+        link: { label: 'matveibrumberg.vercel.app', href: 'https://matveibrumberg.vercel.app/' },
+        color: '#f7db25',
+      },
+      {
+        id: 'project-foam',
+        kind: 'project',
+        size: 'md',
+        title: 'Foam',
+        type: 'Interactive Acoustic & Spatial Audio Simulation & Ear-Training Platform',
+        description:
+          'Foam is a browser-based acoustic simulation platform that bridges the gap between theoretical spatial audio physics and practical sound production. Designed for sound engineers, producers, and students, the platform allows users to visualize and manipulate sound propagation in a 3D environment with high precision.',
+        stack: ['Next.js', 'Supabase', 'Three.js', 'Tone.js', 'Resonance Audio'],
+        link: { label: '[PROJECT LINK]', href: '#' },
+        color: '#ffffff',
       },
       {
         id: 'webgl-perf',
@@ -490,13 +472,40 @@ export const chapters: Chapter[] = [
         tags: ['Web Audio API', 'Tone.js', 'Resonance Audio'],
       },
       {
-        id: 'audio-tools',
-        kind: 'feature',
+        id: 'project-sonicdesk',
+        kind: 'project',
         size: 'md',
-        visual: 'spectrum',
-        title: '[PLACEHOLDER] Tools for musicians',
-        text: '[PLACEHOLDER] Audio tools for musicians and educators — what they solve and who uses them.',
-        tags: ['[TOOL]', '[TOOL]'],
+        title: 'Sonicdesk',
+        type: 'Interactive Audio SaaS for Musicians',
+        description:
+          'An innovative "Git for music" workspace. Features a custom visual version-control tree, interactive audio mixer with visual diffs, and timeline-based comments tied to musical bars.',
+        stack: ['Next.js', 'Web Audio API', 'Tone.js', 'Motion', 'Supabase'],
+        link: { label: 'sonicdesk.studio', href: 'https://sonicdesk.studio' },
+        color: '#dfff00',
+      },
+      {
+        id: 'project-tower',
+        kind: 'project',
+        size: 'md',
+        title: 'Tower',
+        type: 'Generative Ambient Radio for Sleep & Focus',
+        description:
+          'A browser-based relaxation app that layers archival NASA mission and air-traffic-control radio under a generative ambient score. The aesthetic is a late-night airport: quiet, procedural, never quite silent. Built with Next.js and TypeScript, with a custom audio engine on Tone.js and Tonal.js.',
+        stack: ['Next.js', 'TypeScript', 'Tone.js', 'Tonal.js'],
+        link: { label: '[PROJECT LINK]', href: '#' },
+        color: '#0e1728',
+      },
+      {
+        id: 'project-mono',
+        kind: 'project',
+        size: 'md',
+        title: 'Mono',
+        type: 'ASCII Browser Synthesizer',
+        description:
+          'An ASCII-styled browser-based synthesizer that combines retro-inspired aesthetics with advanced sound design capabilities, allowing users to craft and visualize audio directly in their browser.',
+        stack: ['Svelte', 'Tone.js', 'TypeScript'],
+        link: { label: 'mono-steel-xi.vercel.app', href: 'https://mono-steel-xi.vercel.app/' },
+        color: '#ffffff',
       },
       {
         id: 'audio-spatial',
@@ -522,6 +531,18 @@ export const chapters: Chapter[] = [
         title: '[PLACEHOLDER] Accessible by default',
         text: '[PLACEHOLDER] How accessibility shapes the work from the first sketch: contrast, focus, keyboard paths, readable type.',
         tags: ['WCAG AA', 'Keyboard', 'Screen readers'],
+      },
+      {
+        id: 'project-alevtyna',
+        kind: 'project',
+        size: 'md',
+        title: 'Alevtyna Yakovleva',
+        type: 'Neuro-Inclusive Psychologist Website',
+        description:
+          'An empathetic, accessible landing page focusing on user psychological comfort. Features interactive 3D WebGL elements that react to scroll, built on Astro Islands architecture for 100% Lighthouse performance without sacrificing heavy visual graphics.',
+        stack: ['Astro', 'Three.js (R3F)', 'Tailwind CSS', 'Framer Motion'],
+        link: { label: 'alevtina-psy.com', href: 'https://alevtina-psy.com' },
+        color: '#b097f9',
       },
       {
         id: 'human-neuro',

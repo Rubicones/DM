@@ -4,7 +4,8 @@
  * `t-*` / `tag` / `btn` / `card-pad` classes in globals.css.
  */
 import type { ReactNode } from 'react';
-import type { AccentKey, ProjectStation, Station } from '@/config/content';
+import type { ProjectStation, Station } from '@/config/content';
+import { projectNumber } from '@/lib/content-index';
 import { pad } from '@/lib/rail/format';
 import { Visual } from './visuals';
 
@@ -19,12 +20,6 @@ interface Props {
   /** Intro only: shown in place of the scroll hint until the journey starts (rail view's "Start journey"). */
   introAction?: ReactNode;
 }
-
-const accentBlock: Record<AccentKey, string> = {
-  accent1: 'accent-block-1',
-  accent2: 'accent-block-2',
-  accent3: 'accent-block-3',
-};
 
 function CardHeader({ number, chapterTitle, right }: { number: number; chapterTitle: string; right?: string }) {
   return (
@@ -49,22 +44,41 @@ function Tags({ items, label, filledFirst }: { items: string[]; label: string; f
   );
 }
 
-function ProjectVisual({ p, index }: { p: ProjectStation; index: number }) {
+/** Readable ink on a brand colour (WCAG relative luminance). */
+function inkOn(hex: string): string {
+  const n = parseInt(hex.replace('#', '').padEnd(6, '0').slice(0, 6), 16);
+  const lin = (c: number) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return L > 0.22 ? '#0A0A0A' : '#F5F5F2';
+}
+
+/** Brand tile: project colour, its icon (square placeholder until real icons land), work number. */
+function ProjectVisual({ p }: { p: ProjectStation }) {
+  const n = projectNumber.get(p.id) ?? 0;
   if (p.image) {
     // eslint-disable-next-line @next/next/no-img-element -- placeholder slot, swap for next/image when real assets land
     return <img src={p.image} alt="" className="visual aspect-[16/7] w-full object-cover" />;
   }
-  // Deterministic "waveform" placeholder.
-  const bars = Array.from({ length: 28 }, (_, i) => 18 + Math.abs(Math.sin(i * 0.9 + index * 1.7) * Math.cos(i * 0.31)) * 82);
+  const ink = inkOn(p.color);
   return (
-    <div className={`visual relative aspect-[16/7] w-full overflow-hidden ${accentBlock[p.accent]}`} aria-hidden>
-      <span className="t-label absolute left-3 top-3 text-[10px]">Selected work / {pad(index)}</span>
-      <span className="t-display absolute bottom-2 left-3 text-5xl leading-none opacity-90 md:text-6xl">{pad(index)}</span>
-      <div className="absolute bottom-3 right-3 flex h-1/2 items-end gap-[3px]">
-        {bars.map((h, i) => (
-          <span key={i} className="w-[4px] bg-current" style={{ height: `${Math.round(h)}%` }} />
-        ))}
-      </div>
+    <div
+      className="visual project-tile relative aspect-[16/7] w-full overflow-hidden"
+      style={{ background: p.color, color: ink, borderColor: ink === '#0A0A0A' ? undefined : p.color }}
+      aria-hidden
+    >
+      <span className="t-label absolute left-3 top-3 text-[10px]">Selected work / {pad(n)}</span>
+      <span className="project-icon absolute bottom-3 left-3">
+        {p.icon ? (
+          // eslint-disable-next-line @next/next/no-img-element -- small static icon
+          <img src={p.icon} alt="" className="size-full object-contain" />
+        ) : (
+          <span className="t-display text-2xl leading-none">{p.title.charAt(0)}</span>
+        )}
+      </span>
+      <span className="t-display absolute bottom-2 right-3 text-5xl leading-none opacity-90 md:text-6xl">{pad(n)}</span>
     </div>
   );
 }
@@ -153,13 +167,16 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
           </h3>
           <p className="t-label mt-3 text-[11px] font-bold md:text-xs">{s.type}</p>
           <div className="mt-5">
-            <ProjectVisual p={s} index={local.index} />
+            <ProjectVisual p={s} />
           </div>
           <p className="t-body mt-5">{s.description}</p>
           <div className="mt-4">
             <Tags items={s.stack} label="Stack" />
           </div>
-          <a href={s.link.href} className="btn btn-ghost t-label mt-6 inline-flex items-center gap-2 px-3 py-2 text-[11px] font-bold">
+          <a
+            href={s.link.href}
+            {...(s.link.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            className="btn btn-ghost t-label mt-6 inline-flex items-center gap-2 px-3 py-2 text-[11px] font-bold">
             View project <span aria-hidden>↗</span>
             <span className="sr-only">: {s.title}</span>
             <span className="text-muted">{s.link.label}</span>
