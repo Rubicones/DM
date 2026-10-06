@@ -9,6 +9,8 @@ export interface ScrollMap {
   l: Float64Array;
   /** Total scroll distance. */
   total: number;
+  /** Scroll px at which the rider arrives at each station (scroll-snap points). */
+  stops: number[];
 }
 
 let hintS = 0;

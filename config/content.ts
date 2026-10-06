@@ -167,6 +167,23 @@ export interface DwellConfig {
   creep: number;
 }
 
+/**
+ * Stops: the rider brakes into every station and pulls away after it (eased
+ * scroll ↔ rail mapping), and the page scroll settles on a station when a
+ * slow scroll ends near it (CSS scroll-snap, proximity). Fast flings still
+ * carry past — snap points are never `scroll-snap-stop: always`.
+ */
+export interface StopConfig {
+  /** Scroll px over which the rider decelerates into a station (0 = no braking). */
+  brake: number;
+  /** Scroll px over which it accelerates away again (after the reading dwell, if any). */
+  release: number;
+  /** Rail px per scroll px at the station when there is no dwell (dwell → dwell.creep). */
+  creep: number;
+  /** Snap the page scroll to stations (proximity — only when a scroll ends near one). */
+  snap: boolean;
+}
+
 export interface RailLayoutMode {
   /** Where the rider sits in the viewport (mobile: pinned bottom-centre), as fractions of width/height. */
   camera: { x: number; y: number };
@@ -190,6 +207,7 @@ export interface RailLayoutMode {
   /** Default curve params per geometry type (overridable per chapter). Pre-scale units. */
   curves: ChapterGeometry;
   dwell: DwellConfig;
+  stop: StopConfig;
 }
 
 /** Mobile layout: one full-screen world, rider bottom-centre, the current station as a centred card above it. CSS reads the sizes as --m-* variables. */
@@ -249,6 +267,7 @@ export const railLayout: {
     },
     curves: { radius: 280, amplitude: 46, wavelength: 900 },
     dwell: { enabled: false, base: 0, perChar: 0, min: 0, max: 0, creep: 1 },
+    stop: { brake: 220, release: 200, creep: 0.3, snap: true },
   },
   mobile: {
     // rider pinned bottom-centre; panels open above it
@@ -276,6 +295,7 @@ export const railLayout: {
     },
     curves: { radius: 340, amplitude: 70, wavelength: 1100 },
     dwell: { enabled: true, base: 260, perChar: 0.9, min: 320, max: 1500, creep: 0.08 },
+    stop: { brake: 280, release: 220, creep: 0.08, snap: true },
   },
 };
 

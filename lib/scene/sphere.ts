@@ -9,6 +9,9 @@
  *   - one Points object, one draw call
  * CPU never writes attributes per frame — only camera/uniforms. Renders on
  * demand: when progress/camera changed, or at the tier's idle-drift rate.
+ * Mobile: lower DPR cap / idle rate / max point size (QualityPreset.mobile*),
+ * and dynamic resolution — sustained slow frames shrink the drawing buffer
+ * (instant, no geometry rebuild) before the engine drops a whole tier.
  * Choreography keyframes: lib/scene/sphereChoreography.ts
  */
 import * as THREE from 'three';
@@ -140,8 +143,19 @@ function buildGeometry(mobile: boolean, factor: number): THREE.BufferGeometry {
   return g;
 }
 
+/** Dynamic resolution: scale range and thresholds (avg frame interval while rendering, ms). */
+const RES_MIN = 0.6;
+const RES_STEP = 0.85;
+const RES_SLOW_MS = 20;
+const RES_FAST_MS = 14;
+
 export function createSphere(canvas: HTMLCanvasElement, opts: SphereOptions): SceneHandle {
   let preset = opts.preset;
+  const dprCap = (p: QualityPreset) => (opts.mobile ? p.mobileDprMax : p.dprMax);
+  const idleFps = (p: QualityPreset) => (opts.mobile ? p.mobileIdleFps : p.idleFps);
+  const maxPoint = opts.mobile ? 4.5 : 5.5;
+  let resScale = 1;
+  const targetDpr = () => Math.max(0.5, Math.round(Math.min(dprCap(preset), window.devicePixelRatio || 1) * resScale * 100) / 100);
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: false,
@@ -150,7 +164,7 @@ export function createSphere(canvas: HTMLCanvasElement, opts: SphereOptions): Sc
     stencil: false,
     depth: false,
   });
-  let dpr = Math.min(preset.dprMax, window.devicePixelRatio || 1);
+  let dpr = targetDpr();
   renderer.setPixelRatio(dpr);
   renderer.setClearColor(0x000000, 0);
 
@@ -176,7 +190,7 @@ export function createSphere(canvas: HTMLCanvasElement, opts: SphereOptions): Sc
       uTime: { value: 0 },
       uPixelRatio: { value: dpr },
       uFade: { value: 0 },
-      uMaxSize: { value: 5.5 * dpr },
+      uMaxSize: { value: maxPoint * dpr },
     },
   });
   const points = new THREE.Points(geometry, material);
@@ -225,6 +239,46 @@ export function createSphere(canvas: HTMLCanvasElement, opts: SphereOptions): Sc
   let dirty = true;
   let ready = false;
   let disposed = false;
+  // dynamic resolution bookkeeping (only frames rendered back-to-back count)
+  let renderedLast = false;
+  let frameEma = 16.7;
+  let slowMs = 0;
+  let fastMs = 0;
+
+  const applyDpr = () => {
+    const next = targetDpr();
+    if (next === dpr) return;
+    dpr = next;
+    renderer.setPixelRatio(dpr);
+    material.uniforms.uPixelRatio.value = dpr;
+    material.uniforms.uMaxSize.value = maxPoint * dpr;
+    width = 0;
+    resize();
+  };
+
+  const adapt = (dtMs: number) => {
+    frameEma += (dtMs - frameEma) * 0.1;
+    // iOS Low Power Mode: a steady ~33 ms is the rAF cap, not GPU load
+    const capped = frameEma > 31 && frameEma < 35.5;
+    if (frameEma > RES_SLOW_MS && !capped) {
+      slowMs += dtMs;
+      fastMs = 0;
+      if (slowMs > 500 && resScale > RES_MIN) {
+        resScale = Math.max(RES_MIN, resScale * RES_STEP);
+        slowMs = 0;
+        frameEma = 16.7;
+        applyDpr();
+      }
+    } else if (frameEma < RES_FAST_MS) {
+      slowMs = 0;
+      fastMs += dtMs;
+      if (fastMs > 5000 && resScale < 1) {
+        resScale = Math.min(1, resScale / RES_STEP);
+        fastMs = 0;
+        applyDpr();
+      }
+    } else slowMs = Math.max(0, slowMs - dtMs);
+  };
 
   resize();
   const readyP = renderer
@@ -259,8 +313,9 @@ export function createSphere(canvas: HTMLCanvasElement, opts: SphereOptions): Sc
       camera.position.z += dz * k;
       spin += ds * k;
     }
-    const idle = preset.idleFps > 0;
-    const idleDue = idle && now - lastRender >= 1000 / preset.idleFps - 1;
+    const fps = idleFps(preset);
+    const idle = fps > 0;
+    const idleDue = idle && now - lastRender >= 1000 / fps - 1;
     if (idle) idleTime += dtMs / 1000;
     const fade = Math.round(key.fade * w * 0.92 * 1000) / 1000;
 
@@ -269,11 +324,13 @@ export function createSphere(canvas: HTMLCanvasElement, opts: SphereOptions): Sc
       group.rotation.y = spin + idleTime * SPHERE.idleSpin;
       material.uniforms.uTime.value = idleTime;
       material.uniforms.uFade.value = fade;
+      if (renderedLast && moving) adapt(dtMs);
       renderer.render(scene, camera);
       lastRender = now;
       lastFade = fade;
       dirty = false;
-    }
+      renderedLast = true;
+    } else renderedLast = false;
     return moving || idle;
   };
 
@@ -292,15 +349,9 @@ export function createSphere(canvas: HTMLCanvasElement, opts: SphereOptions): Sc
         old.dispose();
       }
       preset = p;
-      const next = Math.min(p.dprMax, window.devicePixelRatio || 1);
-      if (next !== dpr) {
-        dpr = next;
-        renderer.setPixelRatio(dpr);
-        material.uniforms.uPixelRatio.value = dpr;
-        material.uniforms.uMaxSize.value = 5.5 * dpr;
-        width = 0;
-        resize();
-      }
+      resScale = 1; // a new tier starts from its own cap
+      slowMs = fastMs = 0;
+      applyDpr();
       dirty = true;
     },
     dispose() {

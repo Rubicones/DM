@@ -628,6 +628,19 @@ body {
 
 html.scroll-locked { overflow: hidden; }
 
+/* Stops: scroll settles on a station when a slow scroll ends near it; fast flings carry past
+   (proximity + scroll-snap-stop: normal). Points are zero-height markers in the scroll spacer. */
+html.rail-snap { scroll-snap-type: y proximity; }
+.snap-stop {
+  position: absolute;
+  left: 0;
+  width: 1px;
+  height: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: normal;
+  pointer-events: none;
+}
+
 .m-top { height: var(--m-top, 56px); }
 .m-icon-btn {
   display: inline-flex;

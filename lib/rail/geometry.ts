@@ -949,47 +949,93 @@ export function stationTextLength(st: Station): number {
   }
 }
 
+/** Knots per brake / release ramp (piecewise-linear approximation of the eased curve). */
+const RAMP_KNOTS = 8;
+
 /**
- * Piecewise-linear scroll ↔ arc-length map. Between stations: `scrollPerPx`.
- * Right after each station marker (when the dwell is enabled) a dwell segment
- * of D scroll px advances the rider only `creep·D` rail px — reading time
- * without ever freezing the rider. Strictly monotonic → invertible.
+ * Piecewise-linear scroll ↔ arc-length map. Strictly monotonic → invertible.
+ *
+ *   cruise ── brake ──▶ station ── dwell ── release ── cruise …
+ *
+ * cruise:  `scrollPerPx` scroll px per rail px
+ * brake:   over `stop.brake` scroll px the rider's speed eases (smoothstep)
+ *          from cruise down to the station creep — it "amortises" into the stop
+ * dwell:   (mobile) D scroll px advance the rider only `creep·D` rail px —
+ *          reading time without ever freezing the rider
+ * release: the mirror of the brake, back up to cruise speed
+ * Ramps shrink to fit when stations are close together.
  */
 function buildScrollMap(chapters: Chapter[], mode: LayoutMode, stations: StationPlacement[], total: number): ScrollMap {
   const L = railLayout[mode];
   const dw = L.dwell;
+  const stop = L.stop;
+  const v0 = 1 / L.scrollPerPx; // rail px per scroll px while cruising
+  const vd = Math.min(v0, dw.enabled ? dw.creep : stop.creep); // …at the station
+  const avg = (v0 + vd) / 2; // mean speed over a ramp
   const byId = new Map<string, Station>();
   for (const ch of chapters) for (const st of ch.stations) byId.set(st.id, st);
   const ks: number[] = [0];
   const kl: number[] = [0];
+  const stops: number[] = [];
   let S = 0;
-  let prev = 0;
-  stations.forEach((st, i) => {
-    if (st.len > prev) {
-      S += (st.len - prev) * L.scrollPerPx;
-      ks.push(S);
-      kl.push(st.len);
-      prev = st.len;
+  let l = 0;
+  const knot = () => {
+    ks.push(S);
+    kl.push(l);
+  };
+  const cruiseTo = (target: number) => {
+    if (target <= l) return;
+    S += (target - l) * L.scrollPerPx;
+    l = target;
+    knot();
+  };
+  /** Scroll px of a ramp limited to `room` rail px. */
+  const fit = (scroll: number, room: number) => (scroll > 0 && room > 0 && v0 > vd ? Math.min(scroll, room / avg) : 0);
+  /** Eased ramp over `scroll` px; speed(u) = vd + (v0 − vd)·(1 − smoothstep(u)) when braking, mirrored when releasing. */
+  const ramp = (scroll: number, release: boolean) => {
+    const S0 = S;
+    const l0 = l;
+    for (let k = 1; k <= RAMP_KNOTS; k++) {
+      const u = k / RAMP_KNOTS;
+      const g = u * u * u - (u * u * u * u) / 2; // ∫₀ᵘ smoothstep
+      const cover = release ? vd * u + (v0 - vd) * g : v0 * u - (v0 - vd) * g;
+      S = S0 + scroll * u;
+      l = l0 + scroll * cover;
+      knot();
     }
-    const cfg = byId.get(st.id);
+  };
+
+  stations.forEach((st, i) => {
+    // ── approach: cruise, then brake so the rider arrives exactly at the marker
+    const brake = fit(stop.brake, (st.len - l) * 0.45);
+    cruiseTo(st.len - brake * avg);
+    if (brake > 0) {
+      ramp(brake, false);
+      kl[kl.length - 1] = l = st.len; // float drift → land exactly on the station
+    } else cruiseTo(st.len);
+    stops.push(S);
+
     const isLast = i === stations.length - 1;
-    if (!dw.enabled || isLast || !cfg) return;
-    const D = cfg.dwell ?? Math.max(dw.min, Math.min(dw.max, dw.base + dw.perChar * stationTextLength(cfg)));
-    if (D <= 0) return;
+    if (isLast) return;
     const next = stations[i + 1].len;
-    const delta = Math.max(0.5, Math.min(D * dw.creep, (next - prev) * 0.4));
-    S += D;
-    prev += delta;
-    st.dwellLen = delta;
-    ks.push(S);
-    kl.push(prev);
+    // ── reading dwell (mobile)
+    const cfg = byId.get(st.id);
+    if (dw.enabled && cfg) {
+      const D = cfg.dwell ?? Math.max(dw.min, Math.min(dw.max, dw.base + dw.perChar * stationTextLength(cfg)));
+      if (D > 0) {
+        const delta = Math.max(0.5, Math.min(D * dw.creep, (next - l) * 0.4));
+        S += D;
+        l += delta;
+        st.dwellLen = delta;
+        knot();
+      }
+    }
+    // ── pull away
+    const release = fit(stop.release, (next - l) * 0.35);
+    if (release > 0) ramp(release, true);
   });
-  if (total > prev) {
-    S += (total - prev) * L.scrollPerPx;
-    ks.push(S);
-    kl.push(total);
-  }
-  return { s: Float64Array.from(ks), l: Float64Array.from(kl), total: Math.max(1, S) };
+  cruiseTo(total);
+  return { s: Float64Array.from(ks), l: Float64Array.from(kl), total: Math.max(1, S), stops };
 }
 
 const tmpSample = { x: 0, y: 0, tx: 0, ty: 0, wave: 0 };
