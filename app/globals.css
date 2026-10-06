@@ -611,6 +611,15 @@ body {
    above their markers. Sizes come from config/content.ts → mobileLayout /
    railLayout.mobile.camera (as --m-* vars on the stage). svh only. */
 
+/* project brand tile: square icon slot (placeholder until real icons land) */
+.project-icon {
+  display: grid;
+  place-items: center;
+  width: clamp(40px, 18%, 64px);
+  aspect-ratio: 1;
+  border: 2px solid currentColor;
+}
+
 html.scroll-locked,
 html.scroll-locked .rail-scroller,
 html.journey-locked,
@@ -756,7 +765,7 @@ html.rail-snap { scroll-snap-type: y proximity; }
   max-height: 100%;
   min-height: 0;
 }
-.m-card-intro { background: color-mix(in oklch, var(--t-bg) 88%, transparent); }
+
 .m-clip {
   position: relative;
   flex: 0 1 auto;
