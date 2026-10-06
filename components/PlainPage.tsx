@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
 import { chapters } from '@/config/content';
+import { preloadAllThemeFonts } from '@/lib/fonts/preload';
 import { stationEntries, tiltSeed } from '@/lib/content-index';
 import { pad } from '@/lib/rail/format';
 import { StationContent } from './StationContent';
@@ -15,6 +17,8 @@ import { DotSphereStatic } from './visuals';
  * Used for prefers-reduced-motion, and via the "Plain view" toggle.
  */
 export function PlainPage({ onToggleView }: { onToggleView: () => void }) {
+  // every chapter's theme is on this page → switch all theme fonts on
+  useEffect(() => preloadAllThemeFonts(), []);
   return (
     <div className="min-h-screen bg-bg text-fg">
       <TopBar

@@ -25,10 +25,11 @@ const DEV = process.env.NODE_ENV !== 'production';
 const fallbackSize = (mode: LayoutMode) => () => ({ w: mode === 'desktop' ? 520 : 343, h: 380 });
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
-export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
+export function RailExperience({ onToggleView, initialMobile = false }: { onToggleView: () => void; initialMobile?: boolean }) {
   // phones, portrait tablets and landscape phones → mobile layout (media-query
   // changes only fire on width/orientation/height-class changes, not on toolbar show/hide)
-  const isMobile = useMediaQuery(mobileLayout.query, false);
+  // server snapshot = layout guessed from the user agent (proxy.ts → /m) so phones hydrate the mobile markup directly
+  const isMobile = useMediaQuery(mobileLayout.query, initialMobile);
   const mode: LayoutMode = isMobile ? 'mobile' : 'desktop';
   const mobile = mode === 'mobile';
   const engine = useEngineInstance();
@@ -272,7 +273,7 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
                           key={id}
                           ref={engine.bindStation(id)}
                           data-station={id}
-                          data-state="hidden"
+                          data-state={e.station.kind === 'intro' ? 'active' : 'hidden'}
                           data-side={p?.side ?? 'left'}
                           data-size={e.station.size ?? 'md'}
                           data-kind={e.station.kind}

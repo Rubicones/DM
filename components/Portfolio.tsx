@@ -7,7 +7,8 @@ import { RailExperience } from './rail/RailExperience';
 
 type View = 'rail' | 'plain';
 
-export function Portfolio() {
+/** `initialMobile`: layout the server renders (phones are rewritten to /m by proxy.ts). */
+export function Portfolio({ initialMobile = false }: { initialMobile?: boolean }) {
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const [choice, setChoice] = useState<View | null>(null);
 
@@ -24,5 +25,5 @@ export function Portfolio() {
     window.scrollTo(0, 0);
   };
 
-  return view === 'rail' ? <RailExperience onToggleView={toggle} /> : <PlainPage onToggleView={toggle} />;
+  return view === 'rail' ? <RailExperience onToggleView={toggle} initialMobile={initialMobile} /> : <PlainPage onToggleView={toggle} />;
 }

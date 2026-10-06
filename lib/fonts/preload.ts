@@ -3,28 +3,41 @@
 import type { ThemeId } from '@/config/themes';
 import { atkinson, dmMono, fraunces, interTight, outfit } from '@/app/fonts';
 
-/** Families each non-default theme needs (brutalist fonts are preloaded by next/font). */
-const THEME_FONTS: Partial<Record<ThemeId, { family: string; weights: string[] }[]>> = {
-  dark3d: [{ family: interTight.style.fontFamily, weights: ['400', '700'] }],
+type NextFont = typeof interTight;
+
+/** Fonts each non-default theme needs (brutalist fonts are preloaded by next/font). */
+const THEME_FONTS: Partial<Record<ThemeId, { font: NextFont; weights: string[] }[]>> = {
+  dark3d: [{ font: interTight, weights: ['400', '700'] }],
   audio: [
-    { family: outfit.style.fontFamily, weights: ['300', '400'] },
-    { family: interTight.style.fontFamily, weights: ['400', '700'] },
-    { family: dmMono.style.fontFamily, weights: ['400', '500'] },
+    { font: outfit, weights: ['300', '400'] },
+    { font: interTight, weights: ['400', '700'] },
+    { font: dmMono, weights: ['400', '500'] },
   ],
   human: [
-    { family: atkinson.style.fontFamily, weights: ['400', '700'] },
-    { family: fraunces.style.fontFamily, weights: ['400'] },
-    { family: dmMono.style.fontFamily, weights: ['400'] },
+    { font: atkinson, weights: ['400', '700'] },
+    { font: fraunces, weights: ['400'] },
+    { font: dmMono, weights: ['400'] },
   ],
 };
 
 const requested = new Set<ThemeId>();
 
-/** Fire-and-forget: fetch a theme's fonts ahead of its chapter. */
+/**
+ * Fire-and-forget: switch a theme's `--font-*` variables on (see app/fonts.ts —
+ * they are off in the server HTML) and fetch its fonts ahead of its chapter.
+ */
 export function preloadThemeFonts(theme: ThemeId) {
-  if (requested.has(theme) || typeof document === 'undefined' || !document.fonts) return;
+  if (requested.has(theme) || typeof document === 'undefined') return;
   requested.add(theme);
+  const root = document.documentElement;
   for (const f of THEME_FONTS[theme] ?? []) {
-    for (const w of f.weights) void document.fonts.load(`${w} 16px ${f.family}`).catch(() => undefined);
+    root.classList.add(f.font.variable);
+    if (!document.fonts) continue;
+    for (const w of f.weights) void document.fonts.load(`${w} 16px ${f.font.style.fontFamily}`).catch(() => undefined);
   }
+}
+
+/** Every theme at once (plain view shows all chapters on one page). */
+export function preloadAllThemeFonts() {
+  (Object.keys(THEME_FONTS) as ThemeId[]).forEach(preloadThemeFonts);
 }

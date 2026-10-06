@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/next';
 import { fontVariables } from './fonts';
 import { chapters } from '@/config/content';
 import { themeStylesheet } from '@/lib/theme/tokens';
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       </head>
       <body>
         {children}
+        <Analytics />
       </body>
     </html>
   );

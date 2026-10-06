@@ -29,4 +29,11 @@ export const dmMono = DM_Mono({ weight: ['400', '500'], subsets: ['latin'], vari
 export const atkinson = Atkinson_Hyperlegible({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-atkinson', display: 'swap', preload: false });
 export const fraunces = Fraunces({ subsets: ['latin'], axes: ['SOFT', 'WONK', 'opsz'], variable: '--font-fraunces', display: 'swap', preload: false });
 
-export const fontVariables = [archivo, grotesk, mono, interTight, outfit, dmMono, atkinson, fraunces].map((f) => f.variable).join(' ');
+/**
+ * Only the first screen's (brutalist) font variables are on <html> in the server
+ * HTML. The other themes' `--font-*` variables are switched on by
+ * lib/fonts/preload.ts shortly before their chapter — until then those families
+ * are simply undefined, so no theme font is downloaded during the first load
+ * (on mobile every panel is laid out at once and would otherwise pull ~250 KB of fonts).
+ */
+export const fontVariables = [archivo, grotesk, mono].map((f) => f.variable).join(' ');

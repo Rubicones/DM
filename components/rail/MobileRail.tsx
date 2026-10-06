@@ -158,7 +158,8 @@ export function MobileRail({ engine, geo, sound, onToggleView, introAction, onGo
                     key={id}
                     ref={engine.bindStation(id)}
                     data-station={id}
-                    data-state="hidden"
+                    // intro is visible in the server HTML (LCP) — no wait for the engine's first frame
+                    data-state={intro ? 'active' : 'hidden'}
                     data-kind={e.station.kind}
                     aria-labelledby={`${id}-title`}
                     className={`m-panel theme-${chapter.theme}`}
