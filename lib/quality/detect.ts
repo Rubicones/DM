@@ -19,7 +19,8 @@ export function heuristicTier(): Tier {
   const mem = nav.deviceMemory ?? 8;
   if (nav.connection?.saveData) return 'low';
   if (touch) return cores <= 4 || mem <= 3 ? 'low' : 'medium';
-  if (cores >= 8 && mem >= 8) return 'high';
+  const safari = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|Android/.test(navigator.userAgent);
+  if (cores >= 8 && mem >= 8 && !safari) return 'high';
   return 'medium';
 }
 
@@ -47,10 +48,22 @@ export function initQuality() {
     try {
       const { getGPUTier } = await import('detect-gpu');
       const r = await getGPUTier({ benchmarksURL: '/detect-gpu' });
-      const gpu: Tier = r.tier <= 0 ? 'fallback' : r.tier === 1 ? 'low' : r.tier === 2 ? 'medium' : 'high';
+      // 'fallback' (no WebGL) ONLY when WebGL is really missing. Tier 0 also comes back for
+      // blocklisted / slow-benchmark matches — and Firefox hides the unmasked renderer, so its
+      // GPU often matches a weak or wrong entry (Firefox Android landed on the static sphere
+      // while WebGL worked fine). Those get 'low': WebGL on the lightest preset, and the
+      // runtime monitor still steps down if frames really are slow.
+      if (r.type === 'WEBGL_UNSUPPORTED') {
+        if (!quality.locked) quality.set('fallback', 'detect');
+        return;
+      }
+      const gpu: Tier = r.tier <= 1 ? 'low' : r.tier === 2 ? 'medium' : 'high';
       // mobile GPUs at tier 3 still get 'medium' unless the CPU side looks strong too
       const mobileCap: Tier = r.isMobile && (navigator.hardwareConcurrency || 4) < 8 ? 'medium' : 'high';
-      const t = r.tier <= 0 ? 'fallback' : minTier(minTier(gpu, mobileCap), guess === 'low' ? 'low' : 'high');
+      // Safari: WebGL point rendering is much slower than Chrome on the same GPU → at most 'medium'
+      const ua = navigator.userAgent;
+      const safariCap: Tier = /AppleWebKit/.test(ua) && !/Chrome|Chromium|CriOS|Edg|Android/.test(ua) ? 'medium' : 'high';
+      const t = minTier(minTier(minTier(gpu, mobileCap), safariCap), guess === 'low' ? 'low' : 'high');
       if (!quality.locked) quality.set(t, 'detect');
     } catch {
       /* keep heuristic */

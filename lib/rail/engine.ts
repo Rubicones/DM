@@ -90,6 +90,9 @@ const S_PROGRESS = 0, S_CAMERA = 1, S_RAIL = 2, S_STATIONS = 3, S_THEME = 4, S_3
 /** Theme cross-fade between two chapters: centre + half-width in progress units. */
 interface Boundary { at: number; half: number; from: ThemeId; to: ThemeId }
 const IS_TOUCH = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+/** Safari / WebKit: doesn't repaint an element when only its <mask>'s content changes. */
+const IS_WEBKIT =
+  typeof navigator !== 'undefined' && /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|Android/.test(navigator.userAgent);
 
 export class RailEngine {
   private geo: RailGeometry | null = null;
@@ -814,6 +817,8 @@ export class RailEngine {
    * solid "done" layer, future chunks only "ahead"; only the chunk under the
    * rider has a mask whose dashoffset changes per frame (small repaint).
    */
+  private maskFlip = false;
+
   private updateChunks(geo: RailGeometry, d: EngineDom, len: number) {
     const C = geo.chunks;
     if (!C.length) return;
@@ -852,12 +857,19 @@ export class RailEngine {
 
     const cd = d.chunks.get(cur);
     if (cd?.mask) {
+      // dash = chunk length in px (RailSvg maskLen); offset = the part not ridden yet
       const c = C[cur];
-      const local = clamp((len - c.start) / Math.max(1e-6, c.end - c.start));
-      const off = Math.round((1 - local) * 10000) / 10000;
+      const total = Math.ceil(c.end - c.start) + 2;
+      const ridden = Math.min(Math.max(len - c.start, 0), c.end - c.start);
+      const off = Math.round((total - ridden) * 2) / 2;
       if (off !== this.lastMask) {
         this.lastMask = off;
-        cd.mask.style.strokeDashoffset = String(off);
+        cd.mask.style.strokeDashoffset = `${off}px`;
+        // WebKit: re-point the mask (alternating equivalent spellings) so the masked group repaints
+        if (IS_WEBKIT && cd.done) {
+          this.maskFlip = !this.maskFlip;
+          cd.done.setAttribute('mask', this.maskFlip ? `url("#rail-mask-${cur}")` : `url(#rail-mask-${cur})`);
+        }
       }
     }
   }

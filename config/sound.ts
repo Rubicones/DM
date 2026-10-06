@@ -13,4 +13,12 @@ export const soundConfig = {
   releaseDelay: 0.06,
   /** …and decay with this time constant, s (≈ silent within ~150 ms). */
   releaseTau: 0.035,
+  /**
+   * Haptics (Vibration API, where supported — Android Chrome/Firefox; iOS Safari has none):
+   * one short pulse per discrete tick of these engines, in ms. Only the dominant theme
+   * vibrates (no double pulses inside a blend zone); off with prefers-reduced-motion.
+   */
+  haptics: { ratchet: 8, 'bass-dots': 14 } as Partial<Record<string, number>>,
+  /** Min gap between pulses, ms (each vibrate() call cancels the previous one). */
+  hapticMinMs: 45,
 };

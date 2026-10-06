@@ -4,6 +4,8 @@ import type { RailChunk, RailGeometry } from '@/lib/rail/geometry';
 import type { RailEngine } from '@/lib/rail/engine';
 
 const PAD = 60;
+/** Mask dash length = chunk arc length (+ slack for the 0.1 px rounding of the path coordinates). */
+const maskLen = (c: RailChunk) => Math.ceil(c.end - c.start) + 2;
 
 interface Props {
   geo: RailGeometry;
@@ -58,9 +60,10 @@ function Chunk({ c, geo, engine }: { c: RailChunk; geo: RailGeometry; engine: Ra
             stroke="#fff"
             strokeWidth={40}
             strokeLinejoin="round"
-            pathLength={1}
-            strokeDasharray="1 1"
-            strokeDashoffset={1}
+            // real px lengths, not pathLength=1: Safari scales pathLength inconsistently between
+            // dasharray and a CSS dashoffset → the "done" rail showed up in patches ahead of the rider
+            strokeDasharray={`${maskLen(c)} ${maskLen(c) * 2}`}
+            strokeDashoffset={maskLen(c)}
           />
         </mask>
       </defs>

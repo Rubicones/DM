@@ -148,6 +148,8 @@ const RES_MIN = 0.6;
 const RES_STEP = 0.85;
 const RES_SLOW_MS = 20;
 const RES_FAST_MS = 14;
+const IS_SAFARI =
+  typeof navigator !== 'undefined' && /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|Android/.test(navigator.userAgent);
 
 export function createSphere(canvas: HTMLCanvasElement, opts: SphereOptions): SceneHandle {
   let preset = opts.preset;
@@ -155,7 +157,12 @@ export function createSphere(canvas: HTMLCanvasElement, opts: SphereOptions): Sc
   const idleFps = (p: QualityPreset) => (opts.mobile ? p.mobileIdleFps : p.idleFps);
   const maxPoint = opts.mobile ? 4.5 : 5.5;
   let resScale = 1;
-  const targetDpr = () => Math.max(0.5, Math.round(Math.min(dprCap(preset), window.devicePixelRatio || 1) * resScale * 100) / 100);
+  // Safari's WebGL (ANGLE→Metal) pays heavily for fill rate with this many additive point
+  // sprites on a full-screen retina canvas, and its rAF timing hides it from the dynamic-resolution
+  // monitor → hard cap the resolution there (points stay crisp; they're tiny either way)
+  const safariCap = IS_SAFARI ? 1.25 : Infinity;
+  const targetDpr = () =>
+    Math.max(0.5, Math.round(Math.min(dprCap(preset), safariCap, window.devicePixelRatio || 1) * resScale * 100) / 100);
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: false,

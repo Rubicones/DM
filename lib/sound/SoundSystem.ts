@@ -49,6 +49,8 @@ const IS_TOUCH = typeof window !== 'undefined' && !!window.matchMedia?.('(pointe
 interface Slot {
   id: ThemeId;
   engine: ChapterSoundEngine;
+  /** Vibration pulse per tick (ms), 0 = none. */
+  haptic: number;
   period: number;
   lastIndex: number;
   lastTrigger: number;
@@ -231,12 +233,30 @@ export class SoundSystem {
       this.slots.push({
         id,
         engine: FACTORIES[themes[id].sound]({ ctx, out: master, rng: this.rng, bank }),
+        haptic: soundConfig.haptics[themes[id].sound] ?? 0,
         period: dashPeriod(themes[id]),
         lastIndex: NaN,
         lastTrigger: -Infinity,
         lastWeight: -1,
       });
     });
+  }
+
+  /** Vibration API: feature-detected once; needs a prior user gesture ("Start journey" is one). */
+  private readonly canVibrate =
+    typeof navigator !== 'undefined' &&
+    typeof navigator.vibrate === 'function' &&
+    !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  private lastPulse = 0;
+
+  private pulse(ms: number, now: number) {
+    if (!this.canVibrate || document.hidden || now - this.lastPulse < soundConfig.hapticMinMs) return;
+    this.lastPulse = now;
+    try {
+      navigator.vibrate(ms);
+    } catch {
+      /* blocked (no user activation yet) — ignore */
+    }
   }
 
   private onFrame = (f: FrameState) => {
@@ -272,6 +292,7 @@ export class SoundSystem {
         const crossingsPerSec = Math.abs(idx - prev) / Math.max(f.dt, 1e-3);
         s.engine.onDash(idx, crossingsPerSec > cap ? soundConfig.fastScrollGain : 1);
         s.lastTrigger = now;
+        if (s.haptic && w >= 0.5) this.pulse(s.haptic, now);
       }
       s.engine.onMove(distance, speed);
     }
