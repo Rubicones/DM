@@ -943,7 +943,7 @@ export function stationTextLength(st: Station): number {
     case 'principle':
       return st.title.length + st.text.length;
     case 'feature':
-      return st.title.length + st.text.length + (st.tags?.join(' ').length ?? 0);
+      return st.title.length + st.text.length + (st.tags?.join(' ').length ?? 0) + (st.skills?.reduce((a, k) => a + k.name.length + 12, 0) ?? 0);
     case 'contact':
       return st.title.length + st.subtitle.length + st.links.reduce((a, l) => a + l.label.length + l.value.length, 0);
   }

@@ -77,7 +77,10 @@ export interface PrincipleStation extends StationBase {
   text: string;
 }
 /** Inline illustration chosen by content (not by theme). */
-export type FeatureVisual = 'dot-sphere' | 'dot-plane' | 'waveform' | 'spectrum' | 'amp' | 'blob' | 'none';
+export type FeatureVisual = 'dot-sphere' | 'dot-plane' | 'waveform' | 'spectrum' | 'amp' | 'blob' | 'objects-3d' | 'blur-blobs' | 'none';
+
+/** 1 learning · 2 working knowledge · 3 proficient · 4 advanced · 5 expert */
+export type SkillLevel = 1 | 2 | 3 | 4 | 5;
 
 /** Generic "title + text + tags + visual" card — used by the themed chapters. */
 export interface FeatureStation extends StationBase {
@@ -86,6 +89,8 @@ export interface FeatureStation extends StationBase {
   text: string;
   tags?: string[];
   visual?: FeatureVisual;
+  /** Technologies with a proficiency meter. */
+  skills?: { name: string; level: SkillLevel }[];
 }
 export interface ContactStation extends StationBase {
   kind: 'contact';
@@ -414,13 +419,19 @@ export const chapters: Chapter[] = [
     scene: 'sphere',
     stations: [
       {
-        id: 'webgl-intro',
+        id: 'webgl-tech',
         kind: 'feature',
         size: 'md',
-        visual: 'dot-sphere',
-        title: '[PLACEHOLDER] Depth as information',
-        text: '[PLACEHOLDER] What I do with WebGL and Three.js: scroll-reactive scenes, point clouds, shaders that carry meaning instead of decoration.',
-        tags: ['Three.js', 'R3F', 'GLSL', 'Spline'],
+        visual: 'objects-3d',
+        title: 'Real-time 3D that stays fast',
+        text: 'Scroll-driven scenes, point clouds and custom shaders — shipped with lazy-loaded scenes, capped pixel ratio and render-on-demand loops, so the page keeps 60 fps on phones.',
+        skills: [
+          { name: 'Three.js', level: 4 },
+          { name: 'React Three Fiber', level: 4 },
+          { name: 'GLSL shaders', level: 3 },
+          { name: 'Spline', level: 4 },
+          { name: 'WebGL performance', level: 4 },
+        ],
       },
       {
         id: 'project-brumberg',
@@ -446,15 +457,6 @@ export const chapters: Chapter[] = [
         link: { label: '[PROJECT LINK]', href: '#' },
         color: '#ffffff',
       },
-      {
-        id: 'webgl-perf',
-        kind: 'feature',
-        size: 'md',
-        visual: 'dot-sphere',
-        title: '[PLACEHOLDER] Heavy visuals, light pages',
-        text: '[PLACEHOLDER] Lazy-loaded scenes, capped DPR, paused render loops — keeping 60fps and Lighthouse scores with WebGL on the page.',
-        tags: ['Astro Islands', 'Next.js', 'Performance'],
-      },
     ],
   },
   {
@@ -463,13 +465,19 @@ export const chapters: Chapter[] = [
     theme: 'audio',
     stations: [
       {
-        id: 'audio-intro',
+        id: 'audio-tech',
         kind: 'feature',
         size: 'md',
         visual: 'waveform',
-        title: '[PLACEHOLDER] Interfaces that listen',
-        text: '[PLACEHOLDER] Web Audio work: real-time mixers, visual diffs of takes, timeline comments tied to musical bars.',
-        tags: ['Web Audio API', 'Tone.js', 'Resonance Audio'],
+        title: 'Sound in the browser',
+        text: 'Synths, mixers and generative scores on the Web Audio API — synthesis, sample-accurate scheduling, music theory, spatial audio and the visuals that go with them.',
+        skills: [
+          { name: 'Web Audio API', level: 4 },
+          { name: 'Tone.js', level: 5 },
+          { name: 'Tonal.js', level: 3 },
+          { name: 'Resonance Audio', level: 3 },
+          { name: 'Audio visualisation', level: 4 },
+        ],
       },
       {
         id: 'project-sonicdesk',
@@ -507,15 +515,6 @@ export const chapters: Chapter[] = [
         link: { label: 'mono-steel-xi.vercel.app', href: 'https://mono-steel-xi.vercel.app/' },
         color: '#ffffff',
       },
-      {
-        id: 'audio-spatial',
-        kind: 'feature',
-        size: 'md',
-        visual: 'amp',
-        title: '[PLACEHOLDER] Spatial sound in the browser',
-        text: '[PLACEHOLDER] Room acoustics, spatial audio and how it becomes a teaching instrument.',
-        tags: ['Spatial audio', '[STACK]'],
-      },
     ],
   },
   {
@@ -524,13 +523,19 @@ export const chapters: Chapter[] = [
     theme: 'human',
     stations: [
       {
-        id: 'human-a11y',
+        id: 'human-tech',
         kind: 'feature',
         size: 'md',
-        visual: 'blob',
-        title: '[PLACEHOLDER] Accessible by default',
-        text: '[PLACEHOLDER] How accessibility shapes the work from the first sketch: contrast, focus, keyboard paths, readable type.',
-        tags: ['WCAG AA', 'Keyboard', 'Screen readers'],
+        visual: 'blur-blobs',
+        title: 'Built for people',
+        text: 'Accessible, calm interfaces from the first sketch: semantic structure, keyboard paths, readable type and motion that respects the person using it.',
+        skills: [
+          { name: 'WCAG 2.2 / ARIA', level: 4 },
+          { name: 'Semantic HTML & keyboard UX', level: 5 },
+          { name: 'Screen-reader testing', level: 3 },
+          { name: 'Reduced-motion & neuro-inclusive UI', level: 4 },
+          { name: 'UX research & usability tests', level: 3 },
+        ],
       },
       {
         id: 'project-alevtyna',
@@ -543,24 +548,6 @@ export const chapters: Chapter[] = [
         stack: ['Astro', 'Three.js (R3F)', 'Tailwind CSS', 'Framer Motion'],
         link: { label: 'alevtina-psy.com', href: 'https://alevtina-psy.com' },
         color: '#b097f9',
-      },
-      {
-        id: 'human-neuro',
-        kind: 'feature',
-        size: 'md',
-        visual: 'none',
-        title: '[PLACEHOLDER] Calm, neuro-inclusive UI',
-        text: '[PLACEHOLDER] Stress-free interfaces: predictable motion, gentle feedback, room to breathe.',
-        tags: ['Reduced motion', 'Plain language'],
-      },
-      {
-        id: 'human-approach',
-        kind: 'feature',
-        size: 'md',
-        visual: 'none',
-        title: '[PLACEHOLDER] People before pixels',
-        text: '[PLACEHOLDER] My approach to human-centered design — research, empathy, and testing with real people.',
-        tags: ['UX research', 'Empathy'],
       },
     ],
   },
