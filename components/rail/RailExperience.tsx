@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { chapters, railLayout, site } from '@/config/content';
+import { chapters, mobileLayout, railLayout, site } from '@/config/content';
 import { PERF_ALLOWED } from '@/config/quality';
 import { stationEntries, tiltSeed } from '@/lib/content-index';
 import { preloadThemeFonts } from '@/lib/fonts/preload';
@@ -14,6 +14,7 @@ import { StationContent } from '../StationContent';
 import { TopBar } from '../TopBar';
 import { Decorations } from './Decorations';
 import { Hud } from './Hud';
+import { MobileRail } from './MobileRail';
 import { RailDebug } from './RailDebug';
 import { RailSvg } from './RailSvg';
 import { Rider } from './Rider';
@@ -24,8 +25,11 @@ const fallbackSize = (mode: LayoutMode) => () => ({ w: mode === 'desktop' ? 520 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
-  const isDesktop = useMediaQuery(`(min-width: ${railLayout.breakpoint}px)`, true);
-  const mode: LayoutMode = isDesktop ? 'desktop' : 'mobile';
+  // phones, portrait tablets and landscape phones → mobile layout (media-query
+  // changes only fire on width/orientation/height-class changes, not on toolbar show/hide)
+  const isMobile = useMediaQuery(mobileLayout.query, false);
+  const mode: LayoutMode = isMobile ? 'mobile' : 'desktop';
+  const mobile = mode === 'mobile';
   const engine = useEngineInstance();
   const L = railLayout[mode];
 
@@ -71,10 +75,13 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
     if (!measuring) return;
     // one batch of layout reads, no writes in between
     const sizes: Record<string, Size> = {};
-    engine.dom.stations.forEach((el, id) => {
-      const inner = el.firstElementChild as HTMLElement | null;
-      sizes[id] = { w: inner?.offsetWidth ?? 0, h: inner?.offsetHeight ?? 0 };
-    });
+    // mobile: panels open above the pinned rider, not beside the rail → card sizes don't shape the route
+    if (mode === 'desktop') {
+      engine.dom.stations.forEach((el, id) => {
+        const inner = el.firstElementChild as HTMLElement | null;
+        sizes[id] = { w: inner?.offsetWidth ?? 0, h: inner?.offsetHeight ?? 0 };
+      });
+    }
     // same (bucketed) sizes as the current plan → nothing to rebuild
     const prev = full?.sizes;
     if (prev && full?.geo.mode === mode) {
@@ -113,8 +120,18 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
     [engine],
   );
 
-  const scrollLength = Math.round(geo.total * railLayout.scrollPerPx);
+  // scroll distance = scroll map total (linear arc length + mobile reading dwells)
+  const scrollLength = Math.round(geo.scrollMap.total);
   const sizes = full?.sizes;
+  const stageVars = mobile
+    ? ({
+        '--m-top': mobileLayout.topBar,
+        '--m-margin': mobileLayout.panelMargin,
+        '--m-panel-max': mobileLayout.panelMaxWidth,
+        '--m-gap': mobileLayout.panelGap,
+        '--m-rider-y': `${railLayout.mobile.camera.y * 100}svh`,
+      } as CSSProperties)
+    : undefined;
 
   return (
     // Tall spacer: provides scroll distance only (lvh → the full range is reachable with or without the mobile toolbar).
@@ -123,6 +140,8 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
         ref={engine.bind('stage')}
         className={`stage sticky top-0 h-svh w-full overflow-clip bg-bg text-fg ${measuring ? 'measuring' : ''}`}
         data-theme={chapters[0].theme}
+        data-layout={mode}
+        style={stageVars}
       >
         {/* Background textures — composited layer moved with the camera; zero-weight layers are display:none. */}
         <div ref={engine.bind('texture')} className="texture-layer pointer-events-none absolute left-0 top-0" aria-hidden>
@@ -135,98 +154,109 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
         {chapters
           .filter((c) => c.scene)
           .map((c) => (
-            <SceneLayer key={c.id} engine={engine} chapterId={c.id} mobile={mode === 'mobile'} />
+            <SceneLayer key={c.id} engine={engine} chapterId={c.id} mobile={mobile} />
           ))}
 
         <Decorations engine={engine} />
 
-        <TopBar
-          view="rail"
-          className="absolute inset-x-0 top-0"
-          onTalk={() => engine.scrollToChapter('contact')}
-          onToggleView={onToggleView}
-          sound={sound}
-        />
+        {mobile ? (
+          <>
+            <MobileRail engine={engine} geo={geo} sound={sound} onToggleView={onToggleView} />
+            <div ref={engine.bind('veil')} className="veil pointer-events-none absolute inset-0 bg-bg" style={{ opacity: 0 }} aria-hidden />
+          </>
+        ) : (
+          <>
 
-        {/* WORLD — one translate3d per frame (camera). Content stays in DOM reading order. */}
-        <div
-          ref={engine.bind('world')}
-          className="world absolute left-0 top-0"
-          style={{ '--card-gap': `${L.cardGap}px`, '--station-pad': `${L.cardGap + 40}px` } as CSSProperties}
-        >
-          <RailSvg geo={geo} engine={engine} />
-          {DEV && debug && <RailDebug geo={geo} />}
-          <Rider riderRef={engine.bind('rider')} />
+            <TopBar
+              view="rail"
+              className="absolute inset-x-0 top-0"
+              onTalk={() => engine.scrollToChapter('contact')}
+              onToggleView={onToggleView}
+              sound={sound}
+            />
 
-          {chapters.map((chapter, ci) => (
-            <section key={chapter.id} aria-labelledby={ci === 0 ? undefined : `chapter-${chapter.id}`}>
-              {ci > 0 && (
-                <h2 id={`chapter-${chapter.id}`} className="sr-only">
-                  {chapter.title}
-                </h2>
-              )}
-              {stationEntries
-                .filter((e) => e.chapterIndex === ci)
-                .map((e) => {
-                  const p = placements.get(e.station.id);
-                  const id = e.station.id;
-                  const size = sizes?.[id];
-                  return (
-                    <section
-                      key={id}
-                      ref={engine.bindStation(id)}
-                      data-station={id}
-                      data-state="hidden"
-                      data-side={p?.side ?? 'left'}
-                      data-size={e.station.size ?? 'md'}
-                      data-kind={e.station.kind}
-                      aria-labelledby={`${id}-title`}
-                      className={`station absolute theme-${chapter.theme} ${p ? '' : 'unplaced'}`}
-                      style={
-                        {
-                          left: p?.rect.x ?? 0,
-                          top: p?.rect.y ?? 0,
-                          '--seed': tiltSeed(e.number),
-                          '--ciw': size ? `${size.w}px` : undefined,
-                          '--cih': size ? `${size.h}px` : undefined,
-                        } as CSSProperties
-                      }
-                    >
-                      {/* station-inner animates (transform/opacity) + draws the connector; card shapes */}
-                      <div className="station-inner">
-                        <div className={e.station.kind === 'intro' ? '' : 'card'}>
-                          {e.station.kind !== 'intro' && <SketchOutline seed={e.number * 13} />}
-                          <StationContent station={e.station} chapterTitle={e.chapter.title} number={e.number} local={e.local} />
-                        </div>
-                      </div>
-                    </section>
-                  );
-                })}
-            </section>
-          ))}
-        </div>
+            {/* WORLD — one translate3d per frame (camera). Content stays in DOM reading order. */}
+            <div
+              ref={engine.bind('world')}
+              className="world absolute left-0 top-0"
+              style={{ '--card-gap': `${L.cardGap}px`, '--station-pad': `${L.cardGap + 40}px` } as CSSProperties}
+            >
+              <RailSvg geo={geo} engine={engine} />
+              {DEV && debug && <RailDebug geo={geo} />}
+              <Rider riderRef={engine.bind('rider')} />
 
-        {/* Veil: peaks at each transition midpoint to mask non-interpolable swaps. */}
-        <div ref={engine.bind('veil')} className="veil pointer-events-none absolute inset-0 bg-bg" style={{ opacity: 0 }} aria-hidden />
+              {chapters.map((chapter, ci) => (
+                <section key={chapter.id} aria-labelledby={ci === 0 ? undefined : `chapter-${chapter.id}`}>
+                  {ci > 0 && (
+                    <h2 id={`chapter-${chapter.id}`} className="sr-only">
+                      {chapter.title}
+                    </h2>
+                  )}
+                  {stationEntries
+                    .filter((e) => e.chapterIndex === ci)
+                    .map((e) => {
+                      const p = placements.get(e.station.id);
+                      const id = e.station.id;
+                      const size = sizes?.[id];
+                      return (
+                        <section
+                          key={id}
+                          ref={engine.bindStation(id)}
+                          data-station={id}
+                          data-state="hidden"
+                          data-side={p?.side ?? 'left'}
+                          data-size={e.station.size ?? 'md'}
+                          data-kind={e.station.kind}
+                          aria-labelledby={`${id}-title`}
+                          className={`station absolute theme-${chapter.theme} ${p ? '' : 'unplaced'}`}
+                          style={
+                            {
+                              left: p?.rect.x ?? 0,
+                              top: p?.rect.y ?? 0,
+                              '--seed': tiltSeed(e.number),
+                              '--ciw': size ? `${size.w}px` : undefined,
+                              '--cih': size ? `${size.h}px` : undefined,
+                            } as CSSProperties
+                          }
+                        >
+                          {/* station-inner animates (transform/opacity) + draws the connector; card shapes */}
+                          <div className="station-inner">
+                            <div className={e.station.kind === 'intro' ? '' : 'card'}>
+                              {e.station.kind !== 'intro' && <SketchOutline seed={e.number * 13} />}
+                              <StationContent station={e.station} chapterTitle={e.chapter.title} number={e.number} local={e.local} />
+                            </div>
+                          </div>
+                        </section>
+                      );
+                    })}
+                </section>
+              ))}
+            </div>
 
-        <div className="frame-lines pointer-events-none absolute inset-y-0 left-4 right-4 z-10 md:left-[14px] md:right-[14px]" aria-hidden />
-        <p
-          className="t-label pointer-events-none absolute bottom-[110px] left-[2px] z-10 hidden rotate-180 text-[9px] [writing-mode:vertical-rl] md:block"
-          aria-hidden
-        >
-          {site.sideLabel}
-        </p>
+            {/* Veil: peaks at each transition midpoint to mask non-interpolable swaps. */}
+            <div ref={engine.bind('veil')} className="veil pointer-events-none absolute inset-0 bg-bg" style={{ opacity: 0 }} aria-hidden />
 
-        <Hud
-          engine={engine}
-          debug={
-            DEV ? (
-              <button type="button" onClick={() => setDebug((d) => !d)} aria-pressed={debug} className="link-toggle t-label text-[10px]">
-                debug
-              </button>
-            ) : null
-          }
-        />
+            <div className="frame-lines pointer-events-none absolute inset-y-0 left-4 right-4 z-10 md:left-[14px] md:right-[14px]" aria-hidden />
+            <p
+              className="t-label pointer-events-none absolute bottom-[110px] left-[2px] z-10 hidden rotate-180 text-[9px] [writing-mode:vertical-rl] md:block"
+              aria-hidden
+            >
+              {site.sideLabel}
+            </p>
+
+            <Hud
+              engine={engine}
+              debug={
+                DEV ? (
+                  <button type="button" onClick={() => setDebug((d) => !d)} aria-pressed={debug} className="link-toggle t-label text-[10px]">
+                    debug
+                  </button>
+                ) : null
+              }
+            />
+
+          </>
+        )}
 
         {PERF_ALLOWED && <pre ref={engine.bind('perf')} className="perf-overlay" hidden aria-hidden />}
       </div>

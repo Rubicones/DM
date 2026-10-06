@@ -10,7 +10,7 @@
  * objects, cached blend frames, O(1) LUT sampling). The loop sleeps when
  * everything has settled and no subsystem asked for another frame.
  */
-import { chapters as chapterConfig, railLayout } from '@/config/content';
+import { chapters as chapterConfig, mobileLayout, railLayout } from '@/config/content';
 import { PERF_ALLOWED, PERF_BUDGET } from '@/config/quality';
 import { THEME_IDS, TEXTURES, themes, type ThemeId } from '@/config/themes';
 import { quality } from '@/lib/quality/store';
@@ -19,6 +19,7 @@ import type { PerfMonitor } from '@/lib/perf/monitor';
 import { clamp, coord, pad, smoothstep } from './format';
 import type { CardSide, RailGeometry, Vec2 } from './geometry';
 import { sampleLUT, type LutSample } from './lut';
+import { lenToScroll, scrollToLen } from './scrollmap';
 
 interface ChunkDom {
   svg: SVGSVGElement;
@@ -37,6 +38,8 @@ export interface EngineDom {
   hudReadout: HTMLElement | null;
   perf: HTMLElement | null;
   stations: Map<string, HTMLElement>;
+  /** Mobile: station markers on the rail. */
+  markers: Map<string, HTMLElement>;
   nav: Map<string, HTMLElement>;
   chunks: Map<number, ChunkDom>;
   textures: Map<string, HTMLElement>;
@@ -92,6 +95,7 @@ export class RailEngine {
     hudReadout: null,
     perf: null,
     stations: new Map(),
+    markers: new Map(),
     nav: new Map(),
     chunks: new Map(),
     textures: new Map(),
@@ -192,6 +196,13 @@ export class RailEngine {
     });
   }
 
+  bindMarker(id: string) {
+    return this.cached(`m:${id}`, (el: HTMLElement | null) => {
+      if (el) this.dom.markers.set(id, el);
+      else this.dom.markers.delete(id);
+    });
+  }
+
   bindNav(id: string) {
     return this.cached(`n:${id}`, (el: HTMLElement | null) => {
       if (el) this.dom.nav.set(id, el);
@@ -283,6 +294,15 @@ export class RailEngine {
     this.riderSide = '';
     this.camReady = false;
     this.blendKey = '';
+    // mobile panel windows: [arrival − lead, arrival + dwell + hold], never overlapping the next one
+    const S = geo.stations;
+    this.panelIn = new Float64Array(S.length);
+    this.panelOut = new Float64Array(S.length);
+    for (let i = 0; i < S.length; i++) {
+      this.panelIn[i] = i === 0 ? -Infinity : S[i].len - mobileLayout.panelLead;
+      this.panelOut[i] = i === S.length - 1 ? Infinity : S[i].len + S[i].dwellLen + mobileLayout.panelHold;
+    }
+    for (let i = 0; i < S.length - 1; i++) this.panelOut[i] = Math.min(this.panelOut[i], this.panelIn[i + 1]);
     this.chunkVisible = new Int8Array(geo.chunks.length).fill(-1);
     this.chunkState = new Int8Array(geo.chunks.length).fill(9);
     this.curChunk = -1;
@@ -296,7 +316,7 @@ export class RailEngine {
     this.measure();
     if (geo.complete && wasComplete) {
       // rebuild (resize / remeasure): keep the rider where it was
-      const top = keep * this.scrollLength;
+      const top = lenToScroll(geo.scrollMap, keep * geo.total);
       if (Math.abs(window.scrollY - top) > 1) window.scrollTo(0, top);
       this.rawTarget = this.target = this.current = keep;
     } else {
@@ -311,7 +331,9 @@ export class RailEngine {
   // ───────────────────────── public controls & queries
 
   scrollToProgress(p: number) {
-    window.scrollTo({ top: clamp(p) * this.scrollLength, behavior: 'auto' });
+    const g = this.geo;
+    if (!g) return;
+    window.scrollTo({ top: lenToScroll(g.scrollMap, clamp(p) * g.total), behavior: 'auto' });
   }
 
   scrollToStation(id: string) {
@@ -481,11 +503,14 @@ export class RailEngine {
     this.vh = stage?.clientHeight || window.innerHeight;
     this.lastWidth = window.innerWidth;
     // progress maps to a fixed scroll length (independent of innerHeight → no jumps when the toolbar hides)
-    this.scrollLength = Math.max(1, Math.round((this.geo?.total ?? 1) * railLayout.scrollPerPx));
+    this.scrollLength = Math.max(1, this.geo?.scrollMap.total ?? 1);
   }
 
+  /** Scroll px → arc length (through reading-time dwells) → progress. */
   private readScroll() {
-    return clamp(window.scrollY / this.scrollLength);
+    const g = this.geo;
+    if (!g) return 0;
+    return clamp(scrollToLen(g.scrollMap, window.scrollY) / g.total);
   }
 
   private kick() {
@@ -748,7 +773,11 @@ export class RailEngine {
     }
   }
 
+  private panelIn = new Float64Array(0);
+  private panelOut = new Float64Array(0);
+
   private updateStations(geo: RailGeometry, d: EngineDom, len: number) {
+    if (geo.mode === 'mobile') return this.updatePanels(geo, d, len);
     const L = railLayout[geo.mode];
     const reveal = this.vh * L.revealAhead;
     const passBase = Math.min(this.vw, this.vh) * 0.35;
@@ -760,6 +789,26 @@ export class RailEngine {
         this.stationStates[i] = state;
         const el = d.stations.get(s.id);
         if (el) el.dataset.state = state;
+      }
+    }
+  }
+
+  /**
+   * Mobile: a station's panel is shown while the rider is inside its window —
+   * from just before the marker, through the reading dwell, a little beyond —
+   * then it leaves ('passed'); later ones are 'hidden'. Markers mirror it.
+   */
+  private updatePanels(geo: RailGeometry, d: EngineDom, len: number) {
+    const S = geo.stations;
+    for (let i = 0; i < S.length; i++) {
+      const state: StationState = len < this.panelIn[i] ? 'hidden' : len >= this.panelOut[i] ? 'passed' : 'active';
+      if (this.stationStates[i] !== state) {
+        this.stationStates[i] = state;
+        const id = S[i].id;
+        const el = d.stations.get(id);
+        if (el) el.dataset.state = state;
+        const m = d.markers.get(id);
+        if (m) m.dataset.state = state;
       }
     }
   }

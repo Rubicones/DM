@@ -30,6 +30,8 @@ export type CardSize = 'sm' | 'md' | 'lg';
 interface StationBase {
   id: string;
   size?: CardSize;
+  /** Mobile reading time override: scroll px of dwell (0 = none). Default: from text length. */
+  dwell?: number;
 }
 
 export interface IntroStation extends StationBase {
@@ -125,31 +127,48 @@ export interface Chapter {
 
 /** Constraints for the wandering rail planner (lib/rail/geometry.ts). */
 export interface WanderConfig {
-  /** Half-width of the world the rail may wander in (x ∈ [−W, W]). */
+  /** Half-width of the world the rail may wander in (x ∈ [−W, W]), pre-scale units. */
   halfWidth: number;
-  /** Min / max length of one straight leg of the base route. */
+  /** Min / max length of one straight run of the base route. */
   minSeg: number;
   maxSeg: number;
-  /** Longest allowed upward leg. */
+  /** Longest allowed upward run. */
   upMax: number;
-  /** Probability that a vertical turn goes up instead of down. */
-  upChance: number;
+  /** Relative weights of turn directions (straight runs are decided by `persistence`). */
+  dirWeights: { down: number; left: number; right: number; up: number };
+  /** Probability that a station continues the current run without turning (0…1). */
+  persistence: number;
+  /** Hard cap of direction changes per chapter (relaxed only if no layout fits). */
+  maxTurnsPerChapter: number;
+  /** A run may not turn back into the opposite direction within this arc length (no zig-zag). */
+  oscillationGap: number;
   /** Min distance between unrelated rail segments (beyond each segment's curve envelope). */
   railClearance: number;
-  /** Min distance between rail and any card. */
+  /** Min distance between rail and any card (mobile: station markers). */
   cardClearance: number;
-  /** Min gap between two cards. */
+  /** Min gap between two cards (mobile: markers). */
   cardSpacing: number;
-  /** First leg of every chapter is at least this long (chapter label sits on it). */
+  /** First run of every chapter is at least this long (chapter label sits on it). */
   chapterLead: number;
   /** Random candidates tried per station (more = better fits, slower build). */
   candidates: number;
-  /** Bias: 0 = straight down, 1 = wild sideways wandering. */
-  wanderiness: number;
+}
+
+/** Reading time: extra scroll distance per station during which the rider barely moves. */
+export interface DwellConfig {
+  enabled: boolean;
+  /** Scroll px every station gets. */
+  base: number;
+  /** + scroll px per character of station text. */
+  perChar: number;
+  min: number;
+  max: number;
+  /** Rail px advanced per scroll px inside a dwell (keeps the rider moving, never frozen). */
+  creep: number;
 }
 
 export interface RailLayoutMode {
-  /** Where the rider sits in the viewport, as fractions of width/height. */
+  /** Where the rider sits in the viewport (mobile: pinned bottom-centre), as fractions of width/height. */
   camera: { x: number; y: number };
   /** Camera leads toward the direction of travel by this fraction of min(vw, vh). */
   lookAhead: number;
@@ -159,14 +178,39 @@ export interface RailLayoutMode {
   revealAhead: number;
   /** Arc length of one rail chunk (own small SVG, culled when off-screen). */
   chunkLength: number;
+  /** Scroll distance per 1px of rail (outside dwell ranges). */
+  scrollPerPx: number;
+  /**
+   * World zoom applied when the geometry is rendered (planner works in pre-scale
+   * units). Mobile < 1 → the phone screen shows more of the path; stroke widths,
+   * dots and markers keep their theme sizes.
+   */
+  worldScale: number;
   wander: WanderConfig;
-  /** Default curve params per geometry type (overridable per chapter). */
+  /** Default curve params per geometry type (overridable per chapter). Pre-scale units. */
   curves: ChapterGeometry;
+  dwell: DwellConfig;
 }
+
+/** Mobile layout: one full-screen world, rider bottom-centre, the current station as a centred card above it. CSS reads the sizes as --m-* variables. */
+export const mobileLayout = {
+  /** Media query that selects the mobile layout (width, portrait tablets, landscape phones). */
+  query: '(max-width: 767px), (pointer: coarse) and (orientation: portrait) and (max-width: 1100px), (pointer: coarse) and (max-height: 499px)',
+  topBar: '56px',
+  /** Side margin of the station panel. */
+  panelMargin: '16px',
+  /** Max panel width (tablets in portrait). */
+  panelMaxWidth: '560px',
+  /** Gap between the bottom of the content zone (where cards are centred) and the rider. */
+  panelGap: '28px',
+  /** The panel fades in this much arc length (screen px) before the rider reaches the station… */
+  panelLead: 40,
+  /** …and fades out this much arc length after the reading dwell ends. */
+  panelHold: 120,
+};
 
 export const railLayout: {
   breakpoint: number;
-  scrollPerPx: number;
   /** PRNG seed of the wandering rail. Change it to get a different (but stable) layout. */
   seed: number;
   /** Width of the theme blend zone around each chapter boundary, in progress units (0.03 = 3%). */
@@ -180,49 +224,58 @@ export const railLayout: {
   seed: 1032,
   transitionZone: 0.03,
   sceneMargin: 0.04,
-  /** Scroll distance per 1px of rail. <1 = faster travel. */
-  scrollPerPx: 0.4,
   desktop: {
     camera: { x: 0.5, y: 0.5 },
     lookAhead: 0.2,
     cardGap: 72,
     revealAhead: 0.55,
     chunkLength: 1500,
+    scrollPerPx: 0.4,
+    worldScale: 1,
     wander: {
-      halfWidth: 1700,
-      minSeg: 300,
-      maxSeg: 760,
-      upMax: 420,
-      upChance: 0.34,
-      railClearance: 110,
-      cardClearance: 52,
+      halfWidth: 6000,
+      minSeg: 1100,
+      maxSeg: 2400,
+      upMax: 1300,
+      dirWeights: { down: 0.4, left: 0.25, right: 0.25, up: 0.1 },
+      persistence: 0.6,
+      maxTurnsPerChapter: 4,
+      oscillationGap: 2600,
+      railClearance: 120,
+      cardClearance: 56,
       cardSpacing: 48,
-      chapterLead: 420,
+      chapterLead: 700,
       candidates: 64,
-      wanderiness: 0.6,
     },
-    curves: { radius: 150, amplitude: 70, wavelength: 520 },
+    curves: { radius: 280, amplitude: 46, wavelength: 900 },
+    dwell: { enabled: false, base: 0, perChar: 0, min: 0, max: 0, creep: 1 },
   },
   mobile: {
-    camera: { x: 0.5, y: 0.45 },
-    lookAhead: 0.12,
-    cardGap: 36,
-    revealAhead: 0.6,
-    chunkLength: 1000,
+    // rider pinned bottom-centre; panels open above it
+    camera: { x: 0.5, y: 0.82 },
+    lookAhead: 0,
+    cardGap: 0,
+    revealAhead: 0,
+    chunkLength: 900,
+    scrollPerPx: 0.6,
+    worldScale: 0.5,
     wander: {
-      halfWidth: 520,
-      minSeg: 170,
-      maxSeg: 460,
-      upMax: 240,
-      upChance: 0.3,
-      railClearance: 56,
-      cardClearance: 26,
-      cardSpacing: 28,
-      chapterLead: 240,
+      halfWidth: 4500,
+      minSeg: 1400,
+      maxSeg: 3000,
+      upMax: 1500,
+      dirWeights: { down: 0.3, left: 0.3, right: 0.3, up: 0.1 }, // horizontal runs stay on screen around the pinned rider
+      persistence: 0.68,
+      maxTurnsPerChapter: 3,
+      oscillationGap: 3200,
+      railClearance: 220,
+      cardClearance: 120,
+      cardSpacing: 300,
+      chapterLead: 900,
       candidates: 64,
-      wanderiness: 0.5,
     },
-    curves: { radius: 80, amplitude: 22, wavelength: 300 },
+    curves: { radius: 340, amplitude: 70, wavelength: 1100 },
+    dwell: { enabled: true, base: 260, perChar: 0.9, min: 320, max: 1500, creep: 0.08 },
   },
 };
 

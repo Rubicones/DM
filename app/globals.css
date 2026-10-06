@@ -621,6 +621,252 @@ body {
   100% { transform: translate(-0.3px, -0.5px) rotate(2deg); }
 }
 
+/* ───────────── mobile layout (stage[data-layout="mobile"])
+   One full-screen world: rider pinned bottom-centre, station panels open
+   above their markers. Sizes come from config/content.ts → mobileLayout /
+   railLayout.mobile.camera (as --m-* vars on the stage). svh only. */
+
+html.scroll-locked { overflow: hidden; }
+
+.m-top { height: var(--m-top, 56px); }
+.m-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+.m-burger,
+.m-burger::before,
+.m-burger::after {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+}
+.m-burger { position: relative; }
+.m-burger::before,
+.m-burger::after { content: ""; position: absolute; left: 0; }
+.m-burger::before { top: -6px; }
+.m-burger::after { top: 6px; }
+
+/* Content zone: from the top bar down to just above the pinned rider. */
+.m-zone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--m-top, 56px);
+  height: calc(var(--m-rider-y, 82svh) - var(--m-top, 56px) - var(--m-gap, 28px));
+  pointer-events: none;
+}
+.m-panel {
+  position: absolute;
+  inset: 0;
+  padding: var(--m-margin, 16px);
+  padding-left: max(var(--m-margin, 16px), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--m-margin, 16px), env(safe-area-inset-right, 0px));
+  color: var(--t-fg);
+  font-family: var(--t-font-body);
+}
+/* definite height → the card's max-height: 100% resolves (no % chain through auto heights) */
+.m-panel-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  transition:
+    opacity var(--t-duration) var(--t-easing),
+    transform var(--t-duration) var(--t-easing);
+}
+.m-panel[data-state="hidden"] .m-panel-inner {
+  opacity: 0;
+  transform: var(--t-hidden-transform);
+}
+.m-panel[data-state="passed"] .m-panel-inner {
+  opacity: 0;
+  transform: translate3d(0, -24px, 0);
+}
+.m-panel[data-state="active"] { z-index: 1; }
+.m-panel[data-state="active"] .m-card {
+  pointer-events: auto;
+}
+.m-panel[data-state="active"] .m-panel-inner {
+  animation: var(--t-anim-name) var(--t-anim-duration) var(--t-anim-timing) backwards;
+}
+
+/* Panels never scroll: content is clipped and opens in the "more" sheet. */
+.m-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--m-panel-max, 560px);
+  max-height: 100%;
+  min-height: 0;
+}
+.m-card-intro { background: color-mix(in oklch, var(--t-bg) 88%, transparent); }
+.m-clip {
+  position: relative;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: clip;
+}
+.m-panel[data-clamp] .m-clip::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 56px;
+  background: linear-gradient(to bottom, transparent, var(--t-card-bg));
+  pointer-events: none;
+}
+.m-panel[data-clamp] .m-card-intro .m-clip::after { background: linear-gradient(to bottom, transparent, var(--t-bg)); }
+.m-more { display: none; }
+
+/* Mobile panel typography & media: sizes only, styling stays theme-driven. */
+.m-panel h1 { font-size: clamp(44px, 13vw, 76px); }
+.m-panel h3 { font-size: clamp(24px, 7vw, 32px); }
+.m-panel .visual { aspect-ratio: 16 / 6; }
+.m-panel .tag { padding: 2px 6px; }
+.m-panel ul.flex-wrap { gap: 6px; }
+@media (max-height: 499px) {
+  /* landscape phones: keep the text, drop the figure (it stays in "more") */
+  .m-panel .visual { display: none; }
+  .m-panel h1 { font-size: clamp(36px, 8vh, 56px); }
+}
+.m-panel[data-clamp] .m-more {
+  display: inline-flex;
+  flex: none;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 4px var(--t-card-pad) var(--t-card-pad);
+  padding: 0 14px;
+}
+.m-card-intro .m-more { margin-left: 0; }
+
+.m-marker {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+.m-marker-dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--t-fg);
+  border-radius: var(--t-rider-radius);
+  background: var(--t-fg);
+  transition:
+    transform 240ms ease-out,
+    opacity 240ms ease-out;
+}
+.m-marker[data-state="hidden"] .m-marker-dot { background: var(--t-bg); opacity: 0.5; }
+.m-marker[data-state="active"] .m-marker-dot {
+  background: var(--t-accent-1);
+  transform: scale(1.45);
+}
+.m-hint {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--m-rider-y, 82svh) + 28px);
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+  pointer-events: none;
+}
+.m-zone:has(.m-panel[data-kind="intro"][data-state="active"]) ~ .m-hint { opacity: 1; }
+
+/* 3D chapter: sphere full-screen behind, dimmed more where the panel opens */
+.stage[data-layout="mobile"] .scene-vignette {
+  background: radial-gradient(
+    ellipse 80% 46% at 50% 44%,
+    color-mix(in oklch, var(--t-bg) 74%, transparent),
+    color-mix(in oklch, var(--t-bg) 28%, transparent)
+  );
+}
+
+/* Bottom sheets (native <dialog>, top layer). */
+.m-sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: calc(var(--m-panel-max, 560px) + 32px);
+  max-height: 88svh;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--t-fg);
+  overflow: visible;
+}
+.m-sheet::backdrop { background: rgb(0 0 0 / 0.5); }
+.m-sheet[open] { animation: m-sheet-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes m-sheet-in {
+  from { transform: translate3d(0, 100%, 0); }
+  to { transform: none; }
+}
+.m-sheet-body {
+  display: flex;
+  flex-direction: column;
+  max-height: 88svh;
+  rotate: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  font-family: var(--t-font-body);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.m-menu {
+  border-top: var(--t-rule-width) solid var(--t-rule);
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.m-sheet-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 0 16px;
+}
+.m-sheet-grip {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--t-muted);
+  opacity: 0.6;
+}
+.m-sheet-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 16px;
+}
+.m-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  text-align: left;
+}
+.m-menu-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
 /* ───────────── plain view */
 
 .plain-rail {
@@ -629,6 +875,9 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .station-inner,
+  .m-panel-inner,
+  .m-marker-dot,
+  .m-sheet,
   .rider-ring,
   .rider-dot,
   .deco * {

@@ -13,6 +13,8 @@ interface Props {
   number: number;
   /** Index within its chapter (1-based) and chapter length — for "01 / 05" counters. */
   local: { index: number; count: number };
+  /** Appended to element ids — for a second copy (mobile "more" sheet). */
+  idSuffix?: string;
 }
 
 const accentBlock: Record<AccentKey, string> = {
@@ -64,8 +66,8 @@ function ProjectVisual({ p, index }: { p: ProjectStation; index: number }) {
   );
 }
 
-export function StationContent({ station: s, chapterTitle, number, local }: Props) {
-  const titleId = `${s.id}-title`;
+export function StationContent({ station: s, chapterTitle, number, local, idSuffix = '' }: Props) {
+  const titleId = `${s.id}-title${idSuffix}`;
   const counter = local.count > 1 ? `${pad(local.index)} / ${pad(local.count)}` : undefined;
 
   switch (s.kind) {

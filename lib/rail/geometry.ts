@@ -23,9 +23,11 @@
  * Progress = arc length of the rendered polyline (`cum`), so every direction
  * moves at the same speed. Recomputed only when card sizes / layout change.
  */
-import { railLayout, type Chapter, type ChapterGeometry, type RailLayoutMode } from '@/config/content';
+import { railLayout, type Chapter, type ChapterGeometry, type RailLayoutMode, type Station } from '@/config/content';
 import { themes, type PathGeometry, type ThemeId } from '@/config/themes';
 import { buildLUT, sampleLUT, type RailLUT } from './lut';
+import type { ScrollMap } from './scrollmap';
+
 
 export type LayoutMode = 'desktop' | 'mobile';
 export interface Vec2 { x: number; y: number }
@@ -49,6 +51,8 @@ export interface StationPlacement {
   frame: Vec2;
   /** Card extent along the rail — drives "passed" timing. */
   extent: number;
+  /** Mobile: arc length the rider creeps through during this station's reading dwell. */
+  dwellLen: number;
 }
 
 export interface ChapterPlacement {
@@ -115,6 +119,8 @@ export interface RailGeometry {
   total: number;
   /** Arc-length lookup table (O(1) sampling in the frame loop). */
   lut: RailLUT;
+  /** Scroll px ↔ arc length (linear + reading-time dwells). */
+  scrollMap: ScrollMap;
   chunks: RailChunk[];
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
   /** Sharp corners (orthogonal chapters) — node markers + coordinates. */
@@ -244,6 +250,8 @@ interface Candidate {
   extent: number;
   violation: number;
   score: number;
+  /** Direction changes this candidate adds. */
+  turns: number;
 }
 
 interface PlanResult {
@@ -330,22 +338,50 @@ function* planRouteSteps(
     return v;
   };
 
-  const turnFrom = (d: Dir, p: Vec2): Dir => {
+  // ── calm wandering: few, long runs; weighted turns; no zig-zag oscillation
+  const dw = W.dirWeights;
+  /** Weighted pick among the two perpendicular directions (never straight, never back). */
+  const pickTurn = (d: Dir, p: Vec2): Dir => {
     if (isVert(d)) {
-      const pLeft = 0.5 + Math.max(-0.42, Math.min(0.42, (p.x / W.halfWidth) * 0.5));
-      return rng() < pLeft ? LEFT : RIGHT;
+      const bias = Math.max(-0.45, Math.min(0.45, (p.x / W.halfWidth) * 0.6)); // drift back toward the centre
+      const wl = dw.left * (1 + bias);
+      const wr = dw.right * (1 - bias);
+      return rng() * (wl + wr) < wl ? LEFT : RIGHT;
     }
-    return rng() < W.upChance ? UP : DOWN;
+    return rng() * (dw.down + dw.up) < dw.up ? UP : DOWN;
+  };
+  /** Next run direction: any but reverse; staying is boosted by persistence; UP never "stays". */
+  const pickNext = (d: Dir, p: Vec2): Dir => {
+    const bias = Math.max(-0.45, Math.min(0.45, (p.x / W.halfWidth) * 0.6));
+    const base = [dw.right * (1 - bias), dw.down, dw.left * (1 + bias), dw.up];
+    // staying weight is direction-neutral, so persistence doesn't turn into a downward bias
+    const stay = W.persistence * 2 * Math.max(dw.left, dw.right, dw.down * 0.6);
+    let sum = 0;
+    const w = [0, 0, 0, 0];
+    for (let k = 0; k < 4; k++) {
+      if (k === (d + 2) % 4) continue;
+      w[k] = k === d ? (k === UP ? 0 : stay) : base[k];
+      sum += w[k];
+    }
+    let r = rng() * sum;
+    for (let k = 0; k < 4; k++) {
+      r -= w[k];
+      if (r <= 0 && w[k] > 0) return k as Dir;
+    }
+    return d;
   };
   const randomLen = (d: Dir, relax: number) => {
-    if (d === UP) return lerp(W.minSeg, W.upMax, rng());
-    const t = Math.pow(rng(), 1.7 - W.wanderiness);
+    if (d === UP) return lerp(Math.min(W.minSeg, W.upMax * 0.5), W.upMax, rng());
+    // vertical runs a bit shorter than horizontal ones: long sideways journeys, no endless drop
     const max = isVert(d) ? lerp(W.minSeg, W.maxSeg, 0.55) : W.maxSeg;
-    return lerp(W.minSeg, max * relax, t);
+    return lerp(W.minSeg, max * relax, Math.pow(rng(), 1.3));
   };
 
-  let climbBonus = 0;
   let frontierY = 0;
+  let arc = 0;
+  /** Arc length at which the last run in each direction ended (oscillation guard). */
+  const runEnd = [-Infinity, -Infinity, -Infinity, -Infinity];
+  const turnsUsed = chapters.map(() => 0);
 
   const makeCandidate = (
     ci: number,
@@ -355,46 +391,67 @@ function* planRouteSteps(
     relax: number,
     nextCi: number,
     limit: number,
+    budgetHard: boolean,
   ): Candidate | null => {
-    const size = bucket(sizeOf(id));
+    const size = mode === 'mobile' ? { w: 0, h: 0 } : bucket(sizeOf(id));
     const eLead = envelope(geoms[ci], 'lead', cps[ci]);
     const eStation = envelope(geoms[ci], 'station', cps[ci]);
     // the next station's lead legs leave from this station leg's end
     const eNext = envelope(geoms[nextCi], 'lead', cps[nextCi]);
+
+    // plan the run directions: weighted by dirWeights, the current direction
+    // boosted by `persistence` (so most stations continue the run), rarely two turns
+    let plan: Dir[];
+    if (last) plan = dir === DOWN ? [DOWN] : dir === UP ? [pickTurn(dir, P), DOWN] : [DOWN];
+    else {
+      const first = pickNext(dir, P);
+      plan = first !== dir && rng() < 0.1 ? [first, pickTurn(first, P)] : [first];
+    }
+
+    const stationLegLen = (sd: Dir) => {
+      if (last) return W.minSeg * 0.6;
+      if (mode === 'mobile') return W.minSeg * 0.5;
+      const ext = isVert(sd) ? size.h : size.w;
+      return Math.max(W.minSeg * 0.5, ext + 2 * (W.cardClearance + Math.max(eStation, eLead, eNext) + 8));
+    };
     const newLegs: PlanLeg[] = [];
     let d = dir;
     let p = P;
-    const rl = rng();
-    const nLead = last ? 1 + Math.floor(rl * 2) : rl < 0.45 ? 1 : rl < 0.85 ? 2 : 3;
-    for (let j = 0; j < nLead; j++) {
-      d = turnFrom(d, p);
-      let len = randomLen(d, relax);
-      if (chapterFirst && j === 0) len = Math.max(len, W.chapterLead);
-      if (d === UP) len = Math.min(len, W.upMax);
-      const b = move(p, d, len);
-      newLegs.push({ a: p, b, dir: d, chapter: ci, kind: 'lead', e: eLead });
-      p = b;
-    }
-
-    let sdir: Dir;
-    if (last) {
-      if (d === UP) return null;
-      sdir = DOWN;
-    } else {
-      if (mode === 'mobile' && !isVert(d)) {
-        // mobile cards are full-width → station legs must be horizontal
-        d = DOWN;
-        const b = move(p, d, W.minSeg);
-        newLegs.push({ a: p, b, dir: d, chapter: ci, kind: 'lead', e: eLead });
-        p = b;
+    let turns = 0;
+    let localArc = arc;
+    for (let j = 0; j < plan.length; j++) {
+      const nd = plan[j];
+      if (nd !== d) {
+        // no left-right-left / up-down-up within a short distance
+        if (localArc - runEnd[(nd + 2) % 4] < W.oscillationGap) return null;
+        turns++;
       }
-      sdir = turnFrom(d, p);
+      let len = nd === d ? lerp(W.minSeg * 0.4, W.maxSeg * 0.6 * relax, rng()) : randomLen(nd, relax);
+      if (chapterFirst && j === 0) len = Math.max(len, W.chapterLead);
+      if (nd === UP) {
+        // the station leg continues the climb → leave room for it inside upMax
+        const room = W.upMax - stationLegLen(nd);
+        if (room < 120) return null;
+        len = lerp(120, room, rng());
+      }
+      const b = move(p, nd, len);
+      newLegs.push({ a: p, b, dir: nd, chapter: ci, kind: 'lead', e: eLead });
+      localArc += len;
+      p = b;
+      d = nd;
     }
+    if (budgetHard && turnsUsed[ci] + turns > W.maxTurnsPerChapter) return null;
+
+    // station leg continues the last run (no extra turn)
+    const sdir = d;
     const horiz = !isVert(sdir);
     const extent = horiz ? size.w : size.h;
     // leg overhangs the card by clearance + curve envelope, so the next turn can pass the card
-    const slen = last ? W.minSeg * 0.8 : Math.max(W.minSeg, extent + 2 * (W.cardClearance + Math.max(eStation, eLead, eNext) + 8));
-    if (sdir === UP && slen > W.upMax) sdir = DOWN;
+    const slen = stationLegLen(sdir);
+    if (sdir === UP) {
+      const upRun = newLegs.length ? Math.abs(newLegs[newLegs.length - 1].b.y - newLegs[newLegs.length - 1].a.y) : 0;
+      if (upRun + slen > W.upMax) return null;
+    }
     const stationLeg: PlanLeg = { a: p, b: move(p, sdir, slen), dir: sdir, chapter: ci, kind: 'station', e: eStation };
     const all = [...newLegs, stationLeg];
     const t = last ? 1 : 0.5;
@@ -403,24 +460,60 @@ function* planRouteSteps(
     if (rng() < 0.5) sides.reverse();
 
     const end = stationLeg.b;
-    const lateral = all.reduce((acc, l) => acc + Math.abs(l.b.x - l.a.x), 0);
-    const baseScore =
-      (end.y - P.y) * (1 - W.wanderiness * 0.6) +
-      lateral * W.wanderiness * 0.3 +
-      rng() * 320 -
-      (Math.abs(end.x) / W.halfWidth) * 180 +
-      (all.some((l) => l.dir === UP) ? climbBonus : 0);
+    let lateral = 0;
+    for (const l of all) lateral += Math.abs(l.b.x - l.a.x);
+    const overBudget = Math.max(0, turnsUsed[ci] + turns - W.maxTurnsPerChapter);
+    // Direction preferences live in the candidate distribution (dirWeights,
+    // persistence); the score only breaks ties randomly and keeps away from the
+    // world edges, so valid candidates are picked in proportion to the weights.
+    void lateral;
+    const baseScore = rng() * 1000 - Math.max(0, Math.abs(end.x) / W.halfWidth - 0.7) * 1500 - overBudget * 1500;
 
     // stay near the frontier: never end far above the lowest point reached so far
     const floorV = Math.max(0, frontierY - W.upMax * 0.8 - end.y);
+    // trap avoidance: count how many onward directions (straight, left/right turn, down)
+    // still have a free run of ~1.2·minSeg from the end of this candidate
+    const openness = () => {
+      const probeLen = W.minSeg * 1.2;
+      const dirs: Dir[] = isVert(sdir) ? [sdir, LEFT, RIGHT] : [sdir, DOWN];
+      let free = 0;
+      for (const pd of dirs) {
+        if (pd === UP) continue;
+        const a = move(end, pd, eLead + 20);
+        const b = move(end, pd, probeLen);
+        let ok = Math.abs(b.x) <= W.halfWidth;
+        for (let k = 0; ok && k < legs.length; k++) {
+          const o = legs[k];
+          if (segSeg(a, b, o.a, o.b) < W.railClearance + eLead + o.e) ok = false;
+        }
+        for (let k = 0; ok && k < all.length - 1; k++) {
+          const o = all[k];
+          if (segSeg(a, b, o.a, o.b) < W.railClearance + eLead + o.e) ok = false;
+        }
+        if (ok) free++;
+      }
+      return free;
+    };
     let best: Candidate | null = null;
     for (const side of sides) {
-      const rect = placeRect(anchor, side, size, L.cardGap);
+      const rect = mode === 'mobile' ? { x: anchor.x, y: anchor.y, w: 0, h: 0 } : placeRect(anchor, side, size, L.cardGap);
       const v = floorV + violation(all, rect, all.length - 1, Math.max(0, limit - floorV));
-      const c: Candidate = { legs: all, rect, side, t, extent, violation: v, score: baseScore + rng() * 40 };
+      const open = v === 0 && !last ? openness() : 2;
+      const c: Candidate = { legs: all, rect, side, t, extent, violation: v, score: baseScore + rng() * 40 - (2 - Math.min(2, open)) * 700, turns };
       if (!best || v < best.violation || (v === best.violation && c.score > best.score)) best = c;
     }
     return best;
+  };
+
+  const commit = (chosen: Candidate, ci: number) => {
+    let prevDir = legs.length ? legs[legs.length - 1].dir : dir;
+    for (const l of chosen.legs) {
+      if (l.dir !== prevDir) runEnd[prevDir] = arc;
+      arc += Math.abs(l.b.x - l.a.x) + Math.abs(l.b.y - l.a.y);
+      prevDir = l.dir;
+      frontierY = Math.max(frontierY, l.a.y, l.b.y);
+    }
+    turnsUsed[ci] += chosen.turns;
   };
 
   outer: for (let ci = 0; ci < chapters.length; ci++) {
@@ -433,17 +526,20 @@ function* planRouteSteps(
 
       if (first) {
         // Intro: anchor at the very start of the rail.
-        const size = bucket(sizeOf(st.id));
-        const sdir: Dir = mode === 'mobile' ? RIGHT : DOWN;
-        const extent = mode === 'mobile' ? size.w : size.h;
-        const slen = mode === 'mobile' ? Math.max(W.minSeg, size.w / 2 + W.cardClearance + 20) : Math.max(W.minSeg, size.h / 2 + W.cardClearance + 40);
+        const mobile = mode === 'mobile';
+        const size = mobile ? { w: 0, h: 0 } : bucket(sizeOf(st.id));
+        const sdir: Dir = mobile ? RIGHT : DOWN;
+        const extent = mobile ? 0 : size.h;
+        const slen = mobile ? W.minSeg : Math.max(W.minSeg, size.h / 2 + W.cardClearance + 40);
         const leg: PlanLeg = { a: P, b: move(P, sdir, slen), dir: sdir, chapter: 0, kind: 'station', e: envelope(geoms[0], 'station', cps[0]) };
-        const side: CardSide = mode === 'mobile' ? 'below' : 'left';
-        const rect = placeRect(P, side, size, L.cardGap);
+        const side: CardSide = mobile ? 'below' : 'left';
+        const rect = mobile ? { x: P.x, y: P.y, w: 0, h: 0 } : placeRect(P, side, size, L.cardGap);
         legs.push(leg);
         cards.push(rect);
         chapterFirstLeg[0] = 0;
         stations.push({ id: st.id, chapterIndex: 0, legIndex: 0, t: 0, side, rect, extent });
+        arc += slen;
+        frontierY = Math.max(frontierY, leg.b.y);
         P = leg.b;
         dir = sdir;
         yield;
@@ -452,20 +548,20 @@ function* planRouteSteps(
 
       const chapterFirst = si === 0;
       const nextCi = si < ch.stations.length - 1 || ci === chapters.length - 1 ? ci : ci + 1;
-      // occasionally reward candidates that climb, so upward runs actually happen
-      climbBonus = rng() < W.upChance ? W.minSeg * 2.5 : 0;
       let chosen: Candidate | null = null;
       let fallback: Candidate | null = null;
-      for (const relax of [1, 1.5, 0.75, 2.2]) {
+      // [length relax, hard turn budget, candidate multiplier] — later rounds search harder
+      const rounds: [number, boolean, number][] = [[1, true, 1], [1.4, true, 1], [0.8, false, 2], [2, false, 2], [0.6, false, 4], [2.6, false, 4]];
+      for (const [relax, budgetHard, mult] of rounds) {
         let bestValid: Candidate | null = null;
         let valid = 0;
-        for (let a = 0; a < W.candidates; a++) {
-          const c = makeCandidate(ci, st.id, last, chapterFirst, relax, nextCi, fallback ? fallback.violation : Infinity);
+        for (let a = 0; a < W.candidates * mult; a++) {
+          const c = makeCandidate(ci, st.id, last, chapterFirst, relax, nextCi, fallback ? fallback.violation : Infinity, budgetHard);
           if (!c) continue;
           if (c.violation === 0) {
             valid++;
             if (!bestValid || c.score > bestValid.score) bestValid = c;
-            if (valid >= 18) break;
+            if (valid >= 14) break;
           } else if (!fallback || c.violation < fallback.violation) {
             fallback = c;
           }
@@ -477,15 +573,15 @@ function* planRouteSteps(
       }
       if (!chosen) {
         fallbacks++;
-        if (process.env.NODE_ENV !== "production") console.warn(`[rail] no clean fit for ${st.id} (violation ${fallback?.violation.toFixed(0)})`);
+        if (process.env.NODE_ENV !== 'production') console.warn(`[rail] no clean fit for ${st.id} (violation ${fallback?.violation.toFixed(0)})`);
         chosen = fallback!;
       }
 
       if (chapterFirst) chapterFirstLeg[ci] = legs.length;
+      commit(chosen, ci);
       legs.push(...chosen.legs);
       cards.push(chosen.rect);
       stations.push({ id: st.id, chapterIndex: ci, legIndex: legs.length - 1, t: chosen.t, side: chosen.side, rect: chosen.rect, extent: chosen.extent });
-      for (const l of chosen.legs) frontierY = Math.max(frontierY, l.a.y, l.b.y);
       const lastLeg = legs[legs.length - 1];
       P = lastLeg.b;
       dir = lastLeg.dir;
@@ -513,7 +609,12 @@ interface BaseSample {
 const K = 0.5523; // cubic Bézier quarter-circle constant
 
 /** Synchronous build (tests, boot geometry). `maxStations` plans only the first N stations. */
-export function buildRail(chapters: Chapter[], mode: LayoutMode, sizeOf: (id: string) => Size, maxStations = Infinity): RailGeometry {
+export function buildRail(
+  chapters: Chapter[],
+  mode: LayoutMode,
+  sizeOf: (id: string) => Size,
+  maxStations = Infinity,
+): RailGeometry {
   const gen = planRouteSteps(chapters, mode, sizeOf, maxStations);
   let r = gen.next();
   while (!r.done) r = gen.next();
@@ -542,7 +643,7 @@ export async function buildRailAsync(
   cancelled: () => boolean,
   sliceMs = 8,
 ): Promise<RailGeometry | null> {
-  const gen = planRouteSteps(chapters, mode, sizeOf);
+  const gen = planRouteSteps(chapters, mode, sizeOf, Infinity);
   let sliceStart = performance.now();
   let r = gen.next();
   while (!r.done) {
@@ -559,6 +660,9 @@ export async function buildRailAsync(
 }
 
 function renderRail(chapters: Chapter[], mode: LayoutMode, plan: PlanResult, complete: boolean): RailGeometry {
+  /** World zoom: everything below is emitted in scaled px (mobile < 1). */
+  const S = railLayout[mode].worldScale;
+  const scaleRect = (r: Rect): Rect => ({ x: r.x * S, y: r.y * S, w: r.w * S, h: r.h * S });
   const L = railLayout[mode];
   const { legs, cps, geoms } = plan;
   const n = legs.length;
@@ -695,9 +799,10 @@ function renderRail(chapters: Chapter[], mode: LayoutMode, plan: PlanResult, com
     const nx = -b.ty;
     const ny = b.tx;
     const w = env[i] ? env[i] * Math.sin((2 * Math.PI * (b.s - runStart[i])) / b.lam) : 0;
-    const wob = b.wobble ? 1.8 * Math.sin(b.s * 0.045 + 1.3) + 1.1 * Math.sin(b.s * 0.13 + 0.4) : 0;
+    // marker wobble is specified in screen px → divide by the world zoom
+    const wob = b.wobble ? (1.8 * Math.sin(b.s * 0.045 + 1.3) + 1.1 * Math.sin(b.s * 0.13 + 0.4)) / S : 0;
     const off = b.A * w + wob;
-    const p = { x: b.x + nx * off, y: b.y + ny * off };
+    const p = { x: (b.x + nx * off) * S, y: (b.y + ny * off) * S };
     const prev = points[points.length - 1];
     if (prev && Math.abs(prev.x - p.x) < 1e-6 && Math.abs(prev.y - p.y) < 1e-6) {
       toFinal[i] = points.length - 1;
@@ -726,9 +831,10 @@ function renderRail(chapters: Chapter[], mode: LayoutMode, plan: PlanResult, com
       progress: cum[vertex] / total,
       anchor,
       side: s.side,
-      rect: s.rect,
-      frame: frameFor(anchor, s.rect),
-      extent: s.extent,
+      rect: scaleRect(s.rect),
+      frame: frameFor(anchor, scaleRect(s.rect)),
+      dwellLen: 0,
+      extent: s.extent * S,
     };
   });
 
@@ -802,6 +908,7 @@ function renderRail(chapters: Chapter[], mode: LayoutMode, plan: PlanResult, com
     cum,
     total,
     lut,
+    scrollMap: buildScrollMap(chapters, mode, stations, total),
     chunks,
     bounds: { minX, minY, maxX, maxY },
     corners,
@@ -809,13 +916,80 @@ function renderRail(chapters: Chapter[], mode: LayoutMode, plan: PlanResult, com
     stations,
     chapters: chapterPlacements,
     debug: {
-      legs,
-      cards: plan.cards,
-      railClearance: L.wander.railClearance,
-      cardClearance: L.wander.cardClearance,
+      legs: S === 1 ? legs : legs.map((l) => ({ ...l, a: { x: l.a.x * S, y: l.a.y * S }, b: { x: l.b.x * S, y: l.b.y * S }, e: l.e * S })),
+      cards: plan.cards.map(scaleRect),
+      railClearance: L.wander.railClearance * S,
+      cardClearance: L.wander.cardClearance * S,
       fallbacks: plan.fallbacks,
     },
   };
+}
+
+// ───────────────────────────────────────────── 3. scroll map (reading time)
+
+/** Characters of readable text in a station — drives the default dwell. */
+export function stationTextLength(st: Station): number {
+  switch (st.kind) {
+    case 'intro':
+      return st.eyebrow.length + st.name.length + st.role.join(' ').length + st.tagline.length;
+    case 'text':
+      return st.title.length + st.paragraphs.join(' ').length;
+    case 'list':
+      return st.title.length + st.items.reduce((a, i) => a + i.title.length + i.text.length, 0);
+    case 'project':
+      return st.title.length + st.type.length + st.description.length + st.stack.join(' ').length;
+    case 'stack':
+      return st.title.length + st.groups.reduce((a, g) => a + g.label.length + g.items.join(' ').length, 0);
+    case 'principle':
+      return st.title.length + st.text.length;
+    case 'feature':
+      return st.title.length + st.text.length + (st.tags?.join(' ').length ?? 0);
+    case 'contact':
+      return st.title.length + st.subtitle.length + st.links.reduce((a, l) => a + l.label.length + l.value.length, 0);
+  }
+}
+
+/**
+ * Piecewise-linear scroll ↔ arc-length map. Between stations: `scrollPerPx`.
+ * Right after each station marker (when the dwell is enabled) a dwell segment
+ * of D scroll px advances the rider only `creep·D` rail px — reading time
+ * without ever freezing the rider. Strictly monotonic → invertible.
+ */
+function buildScrollMap(chapters: Chapter[], mode: LayoutMode, stations: StationPlacement[], total: number): ScrollMap {
+  const L = railLayout[mode];
+  const dw = L.dwell;
+  const byId = new Map<string, Station>();
+  for (const ch of chapters) for (const st of ch.stations) byId.set(st.id, st);
+  const ks: number[] = [0];
+  const kl: number[] = [0];
+  let S = 0;
+  let prev = 0;
+  stations.forEach((st, i) => {
+    if (st.len > prev) {
+      S += (st.len - prev) * L.scrollPerPx;
+      ks.push(S);
+      kl.push(st.len);
+      prev = st.len;
+    }
+    const cfg = byId.get(st.id);
+    const isLast = i === stations.length - 1;
+    if (!dw.enabled || isLast || !cfg) return;
+    const D = cfg.dwell ?? Math.max(dw.min, Math.min(dw.max, dw.base + dw.perChar * stationTextLength(cfg)));
+    if (D <= 0) return;
+    const next = stations[i + 1].len;
+    const delta = Math.max(0.5, Math.min(D * dw.creep, (next - prev) * 0.4));
+    S += D;
+    prev += delta;
+    st.dwellLen = delta;
+    ks.push(S);
+    kl.push(prev);
+  });
+  if (total > prev) {
+    S += (total - prev) * L.scrollPerPx;
+    ks.push(S);
+    kl.push(total);
+  }
+  return { s: Float64Array.from(ks), l: Float64Array.from(kl), total: Math.max(1, S) };
 }
 
 const tmpSample = { x: 0, y: 0, tx: 0, ty: 0, wave: 0 };

@@ -24,6 +24,15 @@ npm run dev      # http://localhost:3000  (?view=plain forces the flat page)
 - Change `railLayout.seed` for another (stable) layout. Constraints per breakpoint in `railLayout.desktop|mobile.wander`.
 - Each leg carries a curve **envelope** (sine amplitude + fillet cut), and clearances are checked with envelopes included, so rendered curves keep the guarantees.
 - In dev, a console warning `[rail] no clean fit for <station>` means the best-effort candidate was used — try another seed or loosen constraints.
+- Calm wandering: `wander.minSeg/maxSeg` (run lengths), `dirWeights` (down/left/right/up), `persistence` (keep going straight), `maxTurnsPerChapter`, `oscillationGap` (no L-R-L within this distance), `upMax`. Curves: `curves.radius` (smooth fillets), `curves.amplitude/wavelength` (sine).
+
+## Mobile layout
+- Switch: `mobileLayout.query` in `config/content.ts` (width < 768, portrait touch tablets, landscape phones with height < 500). Media-query based → flips only on width/orientation changes.
+- One full-screen world: the camera pins the rider bottom-centre (`railLayout.mobile.camera`, y = 0.82, no look-ahead). World pre-scaled by `railLayout.mobile.worldScale`.
+- Content zone: screen-fixed, from the top bar to `panelGap` above the rider; the current station's card is centred in it (max height = the zone). Visible window per station = [arrival − `panelLead`, arrival + dwell + `panelHold`] (arc px) — engine `updatePanels`.
+- Dwell (reading time): `railLayout.mobile.dwell` → scroll px per station = clamp(base + perChar × text length, min, max); the rider creeps `creep` of it in arc length. Per station: `dwell: <px>` (0 = none). Built into `geo.scrollMap` (`lib/rail/scrollmap.ts`).
+- Long content: panels never scroll; overflow is detected with a ResizeObserver → clipped + "Read more" opens a `<dialog>` bottom sheet with its own scroll (page scroll locked).
+- UI: `components/rail/MobileRail.tsx`; CSS: "mobile layout" section of `app/globals.css`.
 
 ## Sound
 - Engines: `ratchet` (brutalist), `bass-dots` (3D), `velocity-tone` (audio), `pencil` (human-first) — `lib/sound/engines/*.ts`, chosen by `theme.sound`.
