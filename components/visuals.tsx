@@ -87,16 +87,6 @@ const STAR = (cx: number, cy: number, R: number) => {
   return pts.join(' ');
 };
 
-/** Guitar figure: a decaying AM wave leaving the headstock. */
-const AM_TAIL = (() => {
-  let d = '';
-  for (let x = 0; x <= 80; x += 1) {
-    const env = Math.sin((x / 80) * Math.PI) * (1 - x / 140);
-    d += `${x ? 'L' : 'M'}${316 + x} ${(86 + Math.sin(x * 0.9) * 26 * env).toFixed(1)}`;
-  }
-  return d;
-})();
-
 function Frame({ children, label, seed = 11 }: { children: React.ReactNode; label?: string; seed?: number }) {
   return (
     <div className="visual relative aspect-[16/7] w-full overflow-hidden md:aspect-[16/5]" aria-hidden>
@@ -220,40 +210,43 @@ export function Visual({ kind, label }: { kind: FeatureVisual; label?: string })
         </Frame>
       );
     case 'guitar':
-      // neon line art: guitar outline in the signal colour, its note leaving as an AM wave
+      // flat pictogram (OP-Z app style): solid shapes, riso stripes, small coloured knob caps
       return (
         <Frame label={label}>
           <svg viewBox="0 0 400 175" className="h-full w-full" preserveAspectRatio="xMidYMid meet">
-            <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-              {/* glow pass + line pass */}
-              {[
-                { w: 6, o: 0.14 },
-                { w: 1.6, o: 1 },
-              ].map(({ w, o }) => (
-                <g key={w} stroke="var(--t-accent-1)" strokeWidth={w} opacity={o}>
-                  <path d="M30 70 C 20 44, 56 32, 78 48 C 91 57, 104 52, 117 46 C 128 41, 135 52, 127 64 C 123 71, 123 97, 127 104 C 135 117, 128 128, 117 124 C 104 118, 91 113, 78 122 C 56 138, 20 128, 30 101 C 33 92, 33 79, 30 70 Z" />
-                  <path d="M122 80 L 262 81 L 262 92 L 122 93" />
-                  <path d="M260 79 L 304 72 C 312 71, 315 77, 311 82 L 304 97 L 260 94" />
-                </g>
+            <defs>
+              <pattern id="gtr-riso" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+                <rect width="2" height="5" fill="var(--t-fg)" opacity="0.14" />
+              </pattern>
+            </defs>
+            <path
+              d="M58 74 C 46 42, 88 30, 112 50 C 126 61, 140 55, 154 48 C 166 42, 174 55, 165 69 C 160 77, 160 103, 165 111 C 174 125, 166 138, 154 133 C 140 126, 126 120, 112 131 C 88 150, 46 138, 58 106 C 62 96, 62 84, 58 74 Z"
+              fill="var(--t-accent-1)"
+            />
+            <path d="M58 74 C 46 42, 88 30, 112 50 C 126 61, 140 55, 154 48 C 166 42, 174 55, 165 69 C 160 77, 160 103, 165 111 C 174 125, 166 138, 154 133 C 140 126, 126 120, 112 131 C 88 150, 46 138, 58 106 C 62 96, 62 84, 58 74 Z" fill="url(#gtr-riso)" />
+            <path d="M98 68 C 116 62, 138 66, 146 78 L 146 104 C 132 116, 112 118, 98 112 C 90 101, 90 80, 98 68 Z" fill="var(--t-card-bg)" />
+            <rect x={160} y={83} width={168} height={14} rx={2} fill="var(--t-fg)" />
+            {[184, 204, 222, 239, 255, 270, 284, 297, 309, 320].map((x) => (
+              <rect key={x} x={x} y={83} width={1.4} height={14} fill="var(--t-card-bg)" opacity={0.55} />
+            ))}
+            <path d="M326 81 L 366 74 C 374 73, 378 79, 374 85 L 366 104 L 326 99 Z" fill="var(--t-fg)" />
+            {[338, 350, 362].map((x, i) => (
+              <circle key={x} cx={x} cy={70 - i * 1.4} r={3.6} fill="var(--t-fg)" />
+            ))}
+            <rect x={112} y={78} width={7} height={24} rx={1} fill="var(--t-fg)" />
+            <rect x={128} y={78} width={7} height={24} rx={1} fill="var(--t-fg)" />
+            <rect x={80} y={80} width={10} height={20} rx={1.5} fill="var(--t-fg)" />
+            <g stroke="var(--t-card-bg)" strokeWidth={0.8} opacity={0.9}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <path key={i} d={`M85 ${82.5 + i * 3} L 326 ${85 + i * 2} L ${370 - i * 1.4} ${78 + i * 4}`} />
               ))}
-              <g stroke="var(--t-fg)" strokeWidth={1} opacity={0.55}>
-                <path d="M68 66 C 84 60, 104 64, 110 74 L 110 100 C 98 110, 82 112, 68 106 C 61 96, 61 76, 68 66 Z" />
-                {[146, 166, 184, 201, 217, 232, 246].map((x) => (
-                  <path key={x} d={`M${x} 81 L${x} 92`} />
-                ))}
-              </g>
-              <g stroke="var(--t-accent-2)" strokeWidth={1.6}>
-                <path d="M80 76 v 20" />
-                <path d="M94 76 v 20" />
-              </g>
-              <g stroke="var(--t-fg)" strokeWidth={0.7} opacity={0.7}>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <path key={i} d={`M56 ${80 + i * 2.6} L 262 ${82 + i * 1.8} L ${306 - i * 1.6} ${76 + i * 3.6}`} />
-                ))}
-              </g>
-              {/* the note: amplitude-modulated wave trailing off to the right */}
-              <path d={AM_TAIL} stroke="var(--t-accent-1)" strokeWidth={5} opacity={0.12} />
-              <path d={AM_TAIL} stroke="var(--t-accent-1)" strokeWidth={1.4} />
+            </g>
+            <circle cx={92} cy={122} r={6} fill="var(--t-accent-2)" />
+            <circle cx={110} cy={128} r={6} fill="var(--t-accent-3)" />
+            {/* the note: three rings, like a speaker cone pictogram */}
+            <g fill="none" stroke="var(--t-accent-1)" strokeWidth={3}>
+              <path d="M386 66 a 26 26 0 0 1 0 40" />
+              <path d="M374 74 a 14 14 0 0 1 0 24" opacity={0.6} />
             </g>
           </svg>
         </Frame>

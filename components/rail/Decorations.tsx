@@ -2,22 +2,8 @@ import { memo } from 'react';
 import { site } from '@/config/content';
 import type { RailEngine } from '@/lib/rail/engine';
 
-/** Amplitude-modulated carrier (the "AM" waveform), pre-computed once. */
-const SCOPE = (() => {
-  let d = '';
-  for (let x = 0; x <= 1600; x += 4) {
-    const env = Math.pow(Math.abs(Math.sin((x / 1600) * Math.PI * 3)), 1.4);
-    const y = 60 + Math.sin(x * 0.11) * 44 * env;
-    d += `${x ? 'L' : 'M'}${x} ${y.toFixed(1)}`;
-  }
-  return d;
-})();
-const SPARKS: [string, string, 'c' | 'p'][] = [
-  ['8%', '24%', 'p'],
-  ['91%', '38%', 'c'],
-  ['14%', '66%', 'c'],
-  ['84%', '72%', 'p'],
-];
+/** Kick pattern of the 16-step sequencer strip (1 = hit). */
+const STEPS = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0];
 
 const CROSS: [string, string][] = [
   ['5%', '22%'], ['95%', '22%'],
@@ -48,21 +34,32 @@ export const Decorations = memo(function Decorations({ engine }: { engine: RailE
         </div>
       </div>
 
-      {/* Audio — FM synth: oscilloscope AM wave along the bottom, a panel readout, a few sparks */}
+      {/* Audio — Teenage Engineering-style instrument: product label, speaker grille, LCD, live 16-step sequencer */}
       <div ref={engine.bindLayer('deco', 'audio')} className="deco deco-audio">
-        <svg className="synth-scope" viewBox="0 0 1600 120" preserveAspectRatio="none">
-          <path d={SCOPE} className="synth-scope-glow" />
-          <path d={SCOPE} className="synth-scope-line" />
-          <path d="M0 60 H1600" className="synth-scope-axis" />
-        </svg>
-        <div className="synth-panel">
-          <span>fm · 4 op</span>
-          <span>alg 05 · fb 6</span>
-          <span className="synth-panel-patch">e.piano 1</span>
+        <div className="te-label">
+          <span className="te-label-name">R.A.I.L. Ⅰ</span>
+          <span className="te-label-jp">サウンド</span>
+          <span className="te-label-sub">16 step rail sequencer</span>
         </div>
-        {SPARKS.map(([l, t, k]) => (
-          <span key={`${l}-${t}`} className={`synth-spark synth-spark-${k}`} style={{ left: l, top: t }} />
-        ))}
+        <span className="te-grille" />
+        <div className="te-lcd">
+          <span className="te-lcd-bar">bar</span>
+          <span className="te-lcd-num">120.0</span>
+          <span className="te-lcd-rec" />
+          <span className="te-lcd-play" />
+          <span className="te-lcd-fx">fx</span>
+        </div>
+        <div className="te-seq">
+          <span className="te-seq-title">sequencer</span>
+          <div className="te-seq-steps">
+            {STEPS.map((hit, i) => (
+              <span key={i} className="te-step" data-hit={hit ? '' : undefined}>
+                <span className="te-step-n">{i + 1}</span>
+              </span>
+            ))}
+            <span className="te-seq-head" />
+          </div>
+        </div>
       </div>
 
       {/* Human-first — soft pastel fields */}

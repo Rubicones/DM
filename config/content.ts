@@ -465,8 +465,8 @@ export const chapters: Chapter[] = [
     id: 'audio',
     title: 'Audio',
     theme: 'audio',
-    // a tight, low-amplitude carrier wave
-    geometry: { desktop: { amplitude: 15, wavelength: 210, continuous: true }, mobile: { amplitude: 22, wavelength: 260, continuous: true } },
+    // tight, low-amplitude wave — reads like a coiled instrument cable
+    geometry: { desktop: { amplitude: 15, wavelength: 52, continuous: true }, mobile: { amplitude: 22, wavelength: 65, continuous: true } },
     stations: [
       {
         id: 'audio-tech',

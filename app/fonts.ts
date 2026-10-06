@@ -10,10 +10,9 @@ import {
   Atkinson_Hyperlegible,
   Fraunces,
   Inter_Tight,
-  IBM_Plex_Mono,
-  IBM_Plex_Sans,
+  DM_Mono,
   JetBrains_Mono,
-  Michroma,
+  Outfit,
   Space_Grotesk,
 } from 'next/font/google';
 
@@ -23,12 +22,11 @@ export const grotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-spa
 export const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono', display: 'swap' });
 // dark3d
 export const interTight = Inter_Tight({ subsets: ['latin'], variable: '--font-inter-tight', display: 'swap', preload: false });
-// audio (FM synth): wide instrument-panel display, calm plex body + panel mono
-export const michroma = Michroma({ weight: '400', subsets: ['latin'], variable: '--font-michroma', display: 'swap', preload: false });
-export const plexSans = IBM_Plex_Sans({ weight: ['400', '500', '600'], subsets: ['latin'], variable: '--font-plex-sans', display: 'swap', preload: false });
-export const plexMono = IBM_Plex_Mono({ weight: ['400', '500'], subsets: ['latin'], variable: '--font-plex-mono', display: 'swap', preload: false });
+// audio (Teenage Engineering-style): thin geometric display, mono panel labels; body reuses Inter Tight
+export const outfit = Outfit({ weight: ['300', '400'], subsets: ['latin'], variable: '--font-outfit', display: 'swap', preload: false });
+export const dmMono = DM_Mono({ weight: ['400', '500'], subsets: ['latin'], variable: '--font-dm-mono', display: 'swap', preload: false });
 // human-first
 export const atkinson = Atkinson_Hyperlegible({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-atkinson', display: 'swap', preload: false });
 export const fraunces = Fraunces({ subsets: ['latin'], axes: ['SOFT', 'WONK', 'opsz'], variable: '--font-fraunces', display: 'swap', preload: false });
 
-export const fontVariables = [archivo, grotesk, mono, interTight, michroma, plexSans, plexMono, atkinson, fraunces].map((f) => f.variable).join(' ');
+export const fontVariables = [archivo, grotesk, mono, interTight, outfit, dmMono, atkinson, fraunces].map((f) => f.variable).join(' ');
