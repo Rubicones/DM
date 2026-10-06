@@ -766,7 +766,10 @@ function renderRail(chapters: Chapter[], mode: LayoutMode, plan: PlanResult, com
       const P2 = { x: P3.x - d2.x * K * r1, y: P3.y - d2.y * K * r1 };
       const nextGeom = geoms[nx.chapter];
       const on = sineOn && nextGeom === 'sine' && (nx.kind === 'lead' || cps[nx.chapter].continuous) && nx.chapter === l.chapter;
-      const m = 12;
+      // a sine running through the corner needs the same sample density as the straights
+      // (12 fixed samples alias a short wavelength into a zigzag)
+      const ctrl = Math.hypot(P1.x - P0.x, P1.y - P0.y) + Math.hypot(P2.x - P1.x, P2.y - P1.y) + Math.hypot(P3.x - P2.x, P3.y - P2.y);
+      const m = on || wobble ? Math.max(12, 2 * Math.ceil(ctrl / (2 * Math.min(14, cp.wavelength / 28)))) : 12;
       for (let i = 1; i <= m; i++) {
         const t = i / m;
         const mt = 1 - t;

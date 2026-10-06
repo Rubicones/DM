@@ -157,6 +157,7 @@ export class RailEngine {
 
   // theme blending
   private boundaries: Boundary[] = [];
+  private waveAmp: number[] = [];
   private blendKey = '';
   private readonly varCache = new Map<string, string>();
   private readout = 'coords';
@@ -350,6 +351,12 @@ export class RailEngine {
     this.lastMask = -1;
     // Cross-fades sit midway between the last card of one chapter and the first card of
     // the next, never wider than a fraction of that gap → a card never shows mid-blend.
+    // sine amplitude per chapter in world px (camera strips the wave off the rider position)
+    this.waveAmp = geo.chapters.map((c) => {
+      const cfg = chapterConfig[c.index];
+      if (!cfg || themes[cfg.theme].rail.geometry !== 'sine') return 0;
+      return (cfg.geometry?.[geo.mode]?.amplitude ?? railLayout[geo.mode].curves.amplitude) * railLayout[geo.mode].worldScale;
+    });
     this.boundaries = [];
     const maxHalf = railLayout.transitionZone / 2;
     for (let i = 1; i < geo.chapters.length; i++) {
@@ -621,8 +628,14 @@ export class RailEngine {
       const kl = 1 - Math.pow(1 - 0.06, f);
       this.look.x += ((dxT / dl) * reach - this.look.x) * kl;
       this.look.y += ((dyT / dl) * reach - this.look.y) * kl;
-      let tx = p.x + frame.x + this.look.x;
-      let ty = p.y + frame.y + this.look.y;
+      // aim at the wave's centre line, not the rider: final point = base + normal·A·w,
+      // with the base direction taken over ±60px (several wavelengths) → no shake from the sine
+      const amp = this.waveAmp[this.chapterIdx] ?? 0;
+      const off = amp * this.s.wave;
+      const cx = p.x + (dyT / dl) * off;
+      const cy = p.y - (dxT / dl) * off;
+      let tx = cx + frame.x + this.look.x;
+      let ty = cy + frame.y + this.look.y;
       if (geo.mode === 'desktop') {
         // a card taller than the screen must never frame the rider out of view:
         // the rider's screen position stays inside the band between the bars
@@ -636,6 +649,7 @@ export class RailEngine {
         this.cam.y = ty;
         this.camReady = true;
       } else {
+        // mobile: locked to the (wave-free) centre line — the rider wiggles around the pinned spot
         const kc = geo.mode === 'mobile' ? 1 : 1 - Math.pow(1 - CAMERA_LERP, f);
         this.cam.x += (tx - this.cam.x) * kc;
         this.cam.y += (ty - this.cam.y) * kc;
