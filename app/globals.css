@@ -357,36 +357,24 @@ body {
   text-transform: uppercase;
   color: var(--t-fg);
 }
-/* flat TE record key: solid orange, small radius, printed label, status LED */
+/* flat TE record button: orange circle with a white dot */
 .te-rec {
   position: absolute;
   right: 40px;
   top: 84px;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-.te-rec-led {
-  width: 6px;
-  height: 6px;
-  margin-top: 4px;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--t-accent-1);
 }
-.te-rec-key {
-  display: block;
-  width: 64px;
-  height: 64px;
-  padding: 8px;
-  border-radius: 6px;
-  background: var(--t-accent-1);
-  box-shadow: 0 2px 0 #C7400F;
-  font-family: var(--t-font-mono);
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--t-fg);
+.te-rec::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #FFFFFF;
 }
 /* small dark display, orange segments */
 .te-lcd {

@@ -34,10 +34,7 @@ export const Decorations = memo(function Decorations({ engine }: { engine: RailE
       {/* Audio — Teenage Engineering-style instrument: product label, record key, LCD */}
       <div ref={engine.bindLayer('deco', 'audio')} className="deco deco-audio">
         <span className="te-label">Rubicon</span>
-        <span className="te-rec">
-          <span className="te-rec-led" />
-          <span className="te-rec-key">record</span>
-        </span>
+        <span className="te-rec" />
         <div className="te-lcd">
           <span className="te-lcd-bar">bar</span>
           <span className="te-lcd-num">120.0</span>
