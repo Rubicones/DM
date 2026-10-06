@@ -267,7 +267,7 @@ export const railLayout: {
     },
     curves: { radius: 280, amplitude: 46, wavelength: 900 },
     dwell: { enabled: false, base: 0, perChar: 0, min: 0, max: 0, creep: 1 },
-    stop: { brake: 220, release: 200, creep: 0.3, snap: true },
+    stop: { brake: 160, release: 140, creep: 0.7, snap: false },
   },
   mobile: {
     // rider pinned bottom-centre; panels open above it
@@ -294,8 +294,8 @@ export const railLayout: {
       candidates: 64,
     },
     curves: { radius: 340, amplitude: 70, wavelength: 1100 },
-    dwell: { enabled: true, base: 260, perChar: 0.9, min: 320, max: 1500, creep: 0.08 },
-    stop: { brake: 280, release: 220, creep: 0.08, snap: true },
+    dwell: { enabled: true, base: 140, perChar: 0.45, min: 160, max: 700, creep: 0.22 },
+    stop: { brake: 180, release: 150, creep: 0.22, snap: false },
   },
 };
 
@@ -320,7 +320,7 @@ export const chapters: Chapter[] = [
         kind: 'intro',
         size: 'lg',
         eyebrow: 'Independent design engineer',
-        name: 'Dmitriy',
+        name: 'Dmitriy Popov',
         role: ['Creative UI/UX &', 'High-Performance Frontend'],
         tagline: 'Human-centered design. Engineered to perform.',
         hint: 'Scroll to explore',

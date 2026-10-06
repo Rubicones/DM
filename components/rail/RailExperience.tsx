@@ -8,6 +8,7 @@ import { preloadThemeFonts } from '@/lib/fonts/preload';
 import { initQuality } from '@/lib/quality/detect';
 import { buildRail, buildRailAsync, type LayoutMode, type RailGeometry, type Size } from '@/lib/rail/geometry';
 import { useEngineInstance, useMediaQuery, useRailEngine } from '@/lib/rail/hooks';
+import { jumpIntoRider } from '@/lib/rail/journey';
 import { useRailSound } from '@/lib/sound/useRailSound';
 import { SketchOutline } from '../SketchOutline';
 import { StationContent } from '../StationContent';
@@ -114,6 +115,41 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
   const sound = useRailSound(engine);
   const [debug, setDebug] = useState(false);
 
+  // ── "Start journey": the page is locked on the intro until the visitor taps it; the tap
+  // turns sound on (the gesture browsers require) and the intro's full stop jumps onto the rail
+  const [journey, setJourney] = useState<'idle' | 'jumping' | 'done'>('idle');
+  useEffect(() => {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+  }, []);
+  useEffect(() => {
+    const locked = journey !== 'done';
+    engine.setLocked(locked);
+    document.documentElement.classList.toggle('journey-locked', locked);
+    return () => document.documentElement.classList.remove('journey-locked');
+  }, [journey, engine]);
+  const startJourney = () => {
+    if (journey !== 'idle') return;
+    sound.start();
+    // rects are read now, before the dot is hidden by the state change
+    const dot = engine.dom.stage?.querySelector<HTMLElement>('[data-station="intro"] .intro-dot');
+    const riderDot = engine.dom.rider?.querySelector<HTMLElement>('.rider-dot');
+    const landed = dot && riderDot ? jumpIntoRider(dot, riderDot) : Promise.resolve();
+    setJourney('jumping');
+    void landed.then(() => setJourney('done'));
+  };
+  const startButton = (
+    <button
+      type="button"
+      className="journey-btn t-label"
+      onClick={startJourney}
+      tabIndex={journey === 'idle' ? 0 : -1}
+      aria-hidden={journey === 'idle' ? undefined : true}
+    >
+      Start journey <span aria-hidden>→</span>
+    </button>
+  );
+
   // fetch the next chapters' theme fonts ahead of time (≈10% of progress before they appear)
   useEffect(
     () =>
@@ -144,15 +180,16 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
       } as CSSProperties)
     : undefined;
 
-  return (
+  const page = (
     // Tall spacer: provides scroll distance only (lvh → the full range is reachable with or without the mobile toolbar).
-    <main className="relative" style={{ height: `calc(${scrollLength}px + 100lvh)` }}>
+    <main className="relative" style={{ height: `calc(${scrollLength}px + ${mobile ? '100dvh' : '100lvh'})` }}>
       {snap && geo.scrollMap.stops.map((top, i) => <div key={i} className="snap-stop" style={{ top: Math.round(top) }} aria-hidden />)}
       <div
         ref={engine.bind('stage')}
         className={`stage sticky top-0 h-svh w-full overflow-clip bg-bg text-fg ${measuring ? 'measuring' : ''}`}
         data-theme={chapters[0].theme}
         data-layout={mode}
+        data-journey={journey}
         style={stageVars}
       >
         {/* Background textures — composited layer moved with the camera; zero-weight layers are display:none. */}
@@ -173,7 +210,7 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
 
         {mobile ? (
           <>
-            <MobileRail engine={engine} geo={geo} sound={sound} onToggleView={onToggleView} />
+            <MobileRail engine={engine} geo={geo} sound={sound} onToggleView={onToggleView} introAction={startButton} />
             <div ref={engine.bind('veil')} className="veil pointer-events-none absolute inset-0 bg-bg" style={{ opacity: 0 }} aria-hidden />
           </>
         ) : (
@@ -235,7 +272,13 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
                           <div className="station-inner">
                             <div className={e.station.kind === 'intro' ? '' : 'card'}>
                               {e.station.kind !== 'intro' && <SketchOutline seed={e.number * 13} />}
-                              <StationContent station={e.station} chapterTitle={e.chapter.title} number={e.number} local={e.local} />
+                              <StationContent
+                                station={e.station}
+                                chapterTitle={e.chapter.title}
+                                number={e.number}
+                                local={e.local}
+                                introAction={e.station.kind === 'intro' ? startButton : undefined}
+                              />
                             </div>
                           </div>
                         </section>
@@ -273,5 +316,14 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
         {PERF_ALLOWED && <pre ref={engine.bind('perf')} className="perf-overlay" hidden aria-hidden />}
       </div>
     </main>
+  );
+
+  // mobile: scroll inside a fixed container, not the document → the browser toolbar never collapses
+  return mobile ? (
+    <div ref={engine.bindScroller()} className="rail-scroller">
+      {page}
+    </div>
+  ) : (
+    page
   );
 }

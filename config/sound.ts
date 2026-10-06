@@ -13,6 +13,4 @@ export const soundConfig = {
   releaseDelay: 0.06,
   /** …and decay with this time constant, s (≈ silent within ~150 ms). */
   releaseTau: 0.035,
-  /** localStorage key remembering the on/off choice (a click is still required after reload). */
-  storageKey: 'rail-sound',
 };

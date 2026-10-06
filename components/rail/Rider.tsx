@@ -6,7 +6,6 @@ export const Rider = memo(function Rider({ riderRef }: { riderRef: (el: HTMLDivE
     <div ref={riderRef} className="rider" data-side="left" aria-hidden>
       <span className="rider-ring" />
       <span className="rider-dot" />
-      <span className="rider-label">You are here</span>
     </div>
   );
 });
