@@ -1,40 +1,24 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { soundConfig } from '@/config/sound';
 import type { RailEngine } from '@/lib/rail/engine';
 import type { SoundSystem } from './SoundSystem';
 
 export interface SoundControl {
   on: boolean;
-  /** Choice was "on" last visit; waiting for any click/key to start audio. */
-  pending: boolean;
+  /** Turn sound on. Call from inside a user gesture (autoplay policy) — e.g. "Start journey". */
+  start: () => void;
   toggle: () => void;
 }
 
-const read = () => {
-  try {
-    return window.localStorage.getItem(soundConfig.storageKey) === 'on';
-  } catch {
-    return false;
-  }
-};
-const write = (on: boolean) => {
-  try {
-    window.localStorage.setItem(soundConfig.storageKey, on ? 'on' : 'off');
-  } catch {
-    /* storage unavailable — fine */
-  }
-};
-
 /**
- * Owns the SoundSystem for the rail view. OFF by default; never autoplays.
- * The whole audio stack (system + engines + buffer rendering) is a lazy chunk,
- * loaded on the first sound gesture.
+ * Owns the SoundSystem for the rail view. Sound starts with the journey (the
+ * "Start journey" tap is the user gesture browsers require) and can be
+ * switched off from the header. The whole audio stack (system + engines +
+ * buffer rendering) is a lazy chunk, warmed on mount.
  */
 export function useRailSound(engine: RailEngine): SoundControl {
   const [on, setOn] = useState(false);
-  const [pending, setPending] = useState(false);
   const sys = useRef<SoundSystem | null>(null);
 
   /**
@@ -64,62 +48,27 @@ export function useRailSound(engine: RailEngine): SoundControl {
   };
 
   useEffect(() => {
-    let cleanupGesture: (() => void) | null = null;
-    if (read()) {
-      // Remembered "on": still needs a gesture (autoplay policy) — first tap / click / key starts it.
-      // Only activation events count: touchstart / pointerdown (and a touch that becomes a scroll) don't,
-      // so a context created there would stay locked. SoundSystem keeps resuming on later taps anyway.
-      const startOnGesture = () => {
-        cleanupGesture?.();
-        cleanupGesture = null;
-        const ctx = unlock();
-        void ensure()
-          .then((s) => s.start(ctx))
-          .then(() => {
-            setPending(false);
-            setOn(true);
-          });
-      };
-      const events = ['pointerup', 'touchend', 'click', 'keydown'] as const;
-      events.forEach((ev) => window.addEventListener(ev, startOnGesture, { once: true, passive: true }));
-      cleanupGesture = () => events.forEach((ev) => window.removeEventListener(ev, startOnGesture));
-      queueMicrotask(() => setPending(true));
-      // warm the lazy audio chunk so the first gesture starts instantly
-      void import('./SoundSystem');
-    }
+    // warm the lazy audio chunk so "Start journey" starts sound instantly
+    void import('./SoundSystem');
     return () => {
-      cleanupGesture?.();
       void sys.current?.stop();
       sys.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ensure` only closes over refs + engine
   }, [engine]);
 
-  const toggle = () => {
-    if (pending) {
-      setPending(false);
-      if (sys.current?.running) {
-        sys.current.resume(); // inside this tap → unlocks a context created by an earlier non-activating gesture
-        return setOn(true);
-      }
-      const ctx = unlock();
-      void ensure()
-        .then((s) => s.start(ctx))
-        .then(() => setOn(true));
-      return;
-    }
-    if (sys.current?.running) {
-      write(false);
-      setOn(false);
-      void sys.current.stop();
-    } else {
-      write(true);
-      const ctx = sys.current?.running ? undefined : unlock();
-      void ensure()
-        .then((s) => s.start(ctx))
-        .then(() => setOn(true));
-    }
+  const start = () => {
+    setOn(true);
+    if (sys.current?.running) return sys.current.resume();
+    const ctx = unlock();
+    void ensure().then((s) => s.start(ctx));
   };
 
-  return { on, pending, toggle };
+  const toggle = () => {
+    if (sys.current?.running) {
+      setOn(false);
+      void sys.current.stop();
+    } else start();
+  };
+
+  return { on, start, toggle };
 }

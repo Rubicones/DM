@@ -185,6 +185,36 @@ export class RailEngine {
     });
   }
 
+  /**
+   * Mobile: the page scrolls inside a fixed full-screen container instead of
+   * the document, so the browser toolbar never collapses (no resize, no strip
+   * under the stage). Desktop: unbound → the window scrolls.
+   */
+  bindScroller() {
+    return this.cached('scroller', (el: HTMLElement | null) => {
+      if (this.running) (this.scroller ?? window).removeEventListener('scroll', this.onScroll);
+      this.scroller = el;
+      if (this.running) {
+        (el ?? window).addEventListener('scroll', this.onScroll, { passive: true });
+        this.onScroll();
+      }
+    });
+  }
+
+  private scroller: HTMLElement | null = null;
+  private get scrollY() {
+    return this.scroller ? this.scroller.scrollTop : window.scrollY;
+  }
+  private scrollToY(top: number) {
+    (this.scroller ?? window).scrollTo({ top, behavior: 'auto' });
+  }
+
+  /** Before "Start journey": keyboard / focus navigation must not move the rider. */
+  private locked = false;
+  setLocked(v: boolean) {
+    this.locked = v;
+  }
+
   bindStation(id: string) {
     return this.cached(`s:${id}`, (el: HTMLElement | null) => {
       const prev = this.dom.stations.get(id);
@@ -261,7 +291,7 @@ export class RailEngine {
     if (this.running) return;
     this.running = true;
     this.startedAt = performance.now();
-    window.addEventListener('scroll', this.onScroll, { passive: true });
+    (this.scroller ?? window).addEventListener('scroll', this.onScroll, { passive: true });
     window.addEventListener('resize', this.onResize, { passive: true });
     window.addEventListener('keydown', this.onKey);
     document.addEventListener('focusin', this.onFocus);
@@ -274,13 +304,14 @@ export class RailEngine {
 
   stop() {
     this.running = false;
-    window.removeEventListener('scroll', this.onScroll);
+    (this.scroller ?? window).removeEventListener('scroll', this.onScroll);
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKey);
     document.removeEventListener('focusin', this.onFocus);
     document.removeEventListener('visibilitychange', this.onVisibility);
     cancelAnimationFrame(this.raf);
     this.raf = 0;
+    document.documentElement.style.backgroundColor = '';
   }
 
   /** Called whenever geometry is (re)built. Keeps progress. */
@@ -317,7 +348,7 @@ export class RailEngine {
     if (geo.complete && wasComplete) {
       // rebuild (resize / remeasure): keep the rider where it was
       const top = lenToScroll(geo.scrollMap, keep * geo.total);
-      if (Math.abs(window.scrollY - top) > 1) window.scrollTo(0, top);
+      if (Math.abs(this.scrollY - top) > 1) this.scrollToY(top);
       this.rawTarget = this.target = this.current = keep;
     } else {
       // boot → full: progress comes from the real scroll position
@@ -333,7 +364,7 @@ export class RailEngine {
   scrollToProgress(p: number) {
     const g = this.geo;
     if (!g) return;
-    window.scrollTo({ top: lenToScroll(g.scrollMap, clamp(p) * g.total), behavior: 'auto' });
+    this.scrollToY(lenToScroll(g.scrollMap, clamp(p) * g.total));
   }
 
   scrollToStation(id: string) {
@@ -460,7 +491,7 @@ export class RailEngine {
       void this.togglePerf();
       return;
     }
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || this.locked) return;
     const t = e.target as HTMLElement | null;
     if (t?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     switch (e.key) {
@@ -489,7 +520,7 @@ export class RailEngine {
   /** Tabbing into a card moves the rider to it. */
   private onFocus = (e: FocusEvent) => {
     const el = (e.target as Element | null)?.closest?.('[data-station]');
-    if (!el || !this.geo) return;
+    if (!el || !this.geo || this.locked) return;
     const id = el.getAttribute('data-station');
     const i = this.geo.stations.findIndex((s) => s.id === id);
     if (i >= 0 && this.stationStates[i] !== 'active') this.scrollToProgress(this.geo.stations[i].progress);
@@ -510,7 +541,7 @@ export class RailEngine {
   private readScroll() {
     const g = this.geo;
     if (!g) return 0;
-    return clamp(scrollToLen(g.scrollMap, window.scrollY) / g.total);
+    return clamp(scrollToLen(g.scrollMap, this.scrollY) / g.total);
   }
 
   private kick() {
@@ -894,6 +925,8 @@ export class RailEngine {
     if (bf.theme !== this.dominantTheme) {
       this.dominantTheme = bf.theme;
       stage.dataset.theme = bf.theme;
+      // page background (overscroll, area behind browser bars) follows the scene
+      document.documentElement.style.backgroundColor = themes[bf.theme as ThemeId].colors.bg;
       this.lastReadout = '';
     }
     const tq = step / q.themeSteps;
@@ -948,7 +981,7 @@ export class RailEngine {
       const db = Math.round(-24 + 12 * Math.abs(n));
       text = `${hz} Hz · −${Math.abs(db)} dB`;
     } else if (this.readout === 'friendly') {
-      text = `You're here · chapter ${this.chapterIdx + 1} of ${geo.chapters.length}`;
+      text = `Chapter ${this.chapterIdx + 1} of ${geo.chapters.length}`;
     } else {
       text = `X ${coord(p.x)} / Y ${coord(p.y)}`;
     }

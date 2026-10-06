@@ -3,6 +3,7 @@
  * Structure is fixed; every visual property comes from theme tokens via the
  * `t-*` / `tag` / `btn` / `card-pad` classes in globals.css.
  */
+import type { ReactNode } from 'react';
 import type { AccentKey, ProjectStation, Station } from '@/config/content';
 import { pad } from '@/lib/rail/format';
 import { Visual } from './visuals';
@@ -15,6 +16,8 @@ interface Props {
   local: { index: number; count: number };
   /** Appended to element ids — for a second copy (mobile "more" sheet). */
   idSuffix?: string;
+  /** Intro only: shown in place of the scroll hint until the journey starts (rail view's "Start journey"). */
+  introAction?: ReactNode;
 }
 
 const accentBlock: Record<AccentKey, string> = {
@@ -66,7 +69,7 @@ function ProjectVisual({ p, index }: { p: ProjectStation; index: number }) {
   );
 }
 
-export function StationContent({ station: s, chapterTitle, number, local, idSuffix = '' }: Props) {
+export function StationContent({ station: s, chapterTitle, number, local, idSuffix = '', introAction }: Props) {
   const titleId = `${s.id}-title${idSuffix}`;
   const counter = local.count > 1 ? `${pad(local.index)} / ${pad(local.count)}` : undefined;
 
@@ -80,7 +83,8 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
           </p>
           <h1 id={titleId} className="t-display mt-4 text-[clamp(56px,9vw,120px)] leading-[0.9]">
             {s.name}
-            <span className="ml-[0.04em] inline-block size-[0.16em] bg-accent-2 align-baseline" aria-hidden />
+            {/* the full stop — in the rail view it jumps onto the rail and becomes the rider */}
+            <span className="intro-dot ml-[0.04em] inline-block size-[0.16em] bg-accent-2 align-baseline" aria-hidden />
           </h1>
           <p className="mt-6 font-body text-xl leading-snug md:text-2xl">
             {s.role.map((line, i) => (
@@ -90,11 +94,15 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
             ))}
           </p>
           <p className="t-body-sm mt-4 text-muted">{s.tagline}</p>
-          <p className="t-label mt-10 flex items-center gap-3 text-[10px] md:text-[11px]">
-            <span aria-hidden>↓</span>
-            {s.hint}
-            <span className="h-px w-10 bg-fg" aria-hidden />
-          </p>
+          {/* action and hint share one grid cell → the card keeps its size when the journey starts */}
+          <div className="intro-cta mt-10">
+            {introAction}
+            <p className="intro-hint t-label flex items-center gap-3 text-[10px] md:text-[11px]">
+              <span aria-hidden>↓</span>
+              {s.hint}
+              <span className="h-px w-10 bg-fg" aria-hidden />
+            </p>
+          </div>
         </div>
       );
 

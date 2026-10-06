@@ -586,21 +586,6 @@ body {
   box-shadow: var(--t-rider-shadow);
   animation: var(--t-dot-anim);
 }
-.rider-label {
-  position: absolute;
-  top: calc(var(--t-rider-label-size) * -0.7);
-  left: calc(var(--t-ring-size) / 2 + 13px);
-  white-space: nowrap;
-  font-family: var(--t-font-mono);
-  font-size: var(--t-rider-label-size);
-  letter-spacing: var(--t-label-tracking);
-  text-transform: var(--t-rider-label-case);
-  color: var(--t-rider-label-color);
-}
-.rider[data-side="right"] .rider-label {
-  left: auto;
-  right: calc(var(--t-ring-size) / 2 + 13px);
-}
 @keyframes rider-blink {
   50% { opacity: 0.35; }
 }
@@ -626,7 +611,59 @@ body {
    above their markers. Sizes come from config/content.ts → mobileLayout /
    railLayout.mobile.camera (as --m-* vars on the stage). svh only. */
 
-html.scroll-locked { overflow: hidden; }
+html.scroll-locked,
+html.scroll-locked .rail-scroller,
+html.journey-locked,
+html.journey-locked .rail-scroller { overflow: hidden; }
+
+/* Mobile: the page scrolls in this fixed container, not the document → the browser
+   toolbar never collapses (no viewport resize, no strip under the stage). 1px short of
+   the viewport on purpose: a scroller that exactly fills it can be promoted to the
+   root scroller by Chrome, which would hide the toolbar again. The page background
+   (synced to the scene's theme) fills that line. */
+.rail-scroller {
+  position: fixed;
+  inset: 0 0 1px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+.rail-scroller .stage { height: calc(100dvh - 1px); }
+html.rail-snap .rail-scroller { scroll-snap-type: y proximity; }
+
+/* ───────────── "Start journey" (stage[data-journey]: idle → jumping → done) */
+.intro-cta { display: grid; align-items: center; justify-items: start; }
+.intro-cta > * { grid-area: 1 / 1; }
+.journey-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 0 28px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  background: #ff3b00;
+  border: 3px solid var(--t-fg);
+  box-shadow: 6px 6px 0 var(--t-fg);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 90ms steps(2, end), box-shadow 90ms steps(2, end), opacity 200ms ease-out;
+}
+.journey-btn:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--t-fg); }
+.journey-btn:active { transform: translate(4px, 4px); box-shadow: 2px 2px 0 var(--t-fg); }
+.journey-btn:focus-visible { outline: 3px solid var(--t-accent-2); outline-offset: 4px; }
+.stage:not([data-journey="idle"]) .journey-btn { opacity: 0; visibility: hidden; pointer-events: none; }
+.stage[data-journey="idle"] .intro-hint,
+.stage[data-journey="jumping"] .intro-hint { visibility: hidden; }
+/* the full stop has jumped onto the rail; the rider appears when it lands */
+.stage:not([data-journey="done"]) .rider { visibility: hidden; }
+.stage:not([data-journey="idle"]) .intro-dot { visibility: hidden; }
+.stage:not([data-journey="done"]) .m-hint { display: none; }
+
+.m-icon-btn.m-sound-btn { width: 44px; padding: 0; }
+.m-sound-btn:not([data-on]) { opacity: 0.55; }
 
 /* Stops: scroll settles on a station when a slow scroll ends near it; fast flings carry past
    (proximity + scroll-snap-stop: normal). Points are zero-height markers in the scroll spacer. */

@@ -29,13 +29,13 @@ function SoundButton({ sound }: { sound: SoundControl | null }) {
       </span>
     );
   }
-  const label = sound.on ? 'Sound on' : sound.pending ? 'Sound · tap' : 'Sound off';
+  const label = sound.on ? 'Sound on' : 'Sound off';
   return (
     <button
       type="button"
       onClick={sound.toggle}
       aria-pressed={sound.on}
-      title={sound.pending ? 'Sound was on last time — click anywhere to resume' : 'Toggle rail sounds'}
+      title="Toggle rail sounds"
       className="sound-btn t-label text-[10px]"
       data-on={sound.on ? '' : undefined}
     >

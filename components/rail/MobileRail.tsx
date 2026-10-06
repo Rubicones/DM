@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { chapters, site } from '@/config/content';
 import { stationEntries, tiltSeed } from '@/lib/content-index';
 import type { RailEngine } from '@/lib/rail/engine';
@@ -16,6 +16,8 @@ interface Props {
   geo: RailGeometry;
   sound: SoundControl;
   onToggleView: () => void;
+  /** "Start journey" button for the intro card. */
+  introAction: ReactNode;
 }
 
 /**
@@ -27,7 +29,7 @@ interface Props {
  * (keyboard / screen readers as on desktop); content taller than the space
  * above the rider is clipped and opens in a "more" bottom sheet.
  */
-export function MobileRail({ engine, geo, sound, onToggleView }: Props) {
+export function MobileRail({ engine, geo, sound, onToggleView, introAction }: Props) {
   const [sheet, setSheet] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
   const zoneRef = useRef<HTMLDivElement>(null);
@@ -90,6 +92,16 @@ export function MobileRail({ engine, geo, sound, onToggleView }: Props) {
               00%
             </span>
           </p>
+          <button
+            type="button"
+            className="m-icon-btn m-sound-btn"
+            onClick={sound.toggle}
+            aria-pressed={sound.on}
+            data-on={sound.on ? '' : undefined}
+          >
+            <SoundIcon on={sound.on} />
+            <span className="sr-only">Sound</span>
+          </button>
           <button
             type="button"
             className="m-icon-btn t-label text-[10px]"
@@ -155,7 +167,13 @@ export function MobileRail({ engine, geo, sound, onToggleView }: Props) {
                         {!intro && <SketchOutline seed={e.number * 13} />}
                         <div className="m-clip">
                           <div className="m-content">
-                            <StationContent station={e.station} chapterTitle={e.chapter.title} number={e.number} local={e.local} />
+                            <StationContent
+                              station={e.station}
+                              chapterTitle={e.chapter.title}
+                              number={e.number}
+                              local={e.local}
+                              introAction={intro ? introAction : undefined}
+                            />
                           </div>
                         </div>
                         <button
@@ -251,7 +269,7 @@ export function MobileRail({ engine, geo, sound, onToggleView }: Props) {
                 className="sound-btn m-menu-chip t-label text-[11px]"
                 data-on={sound.on ? '' : undefined}
               >
-                {sound.on ? 'Sound on' : sound.pending ? 'Sound · tap' : 'Sound off'}
+                {sound.on ? 'Sound on' : 'Sound off'}
               </button>
               <button type="button" onClick={onToggleView} className="link-toggle m-menu-chip t-label text-[11px]">
                 Plain view
@@ -268,6 +286,23 @@ export function MobileRail({ engine, geo, sound, onToggleView }: Props) {
         </div>
       </dialog>
     </>
+  );
+}
+
+/** Speaker; waves when on, a cross when off. currentColor → follows the theme. */
+function SoundIcon({ on }: { on: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" aria-hidden>
+      <path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor" />
+      {on ? (
+        <>
+          <path d="M16 9.5c.8.7 1.2 1.6 1.2 2.5s-.4 1.8-1.2 2.5" />
+          <path d="M18.6 6.8c1.5 1.4 2.3 3.2 2.3 5.2s-.8 3.8-2.3 5.2" />
+        </>
+      ) : (
+        <path d="M16 9.5l5 5M21 9.5l-5 5" />
+      )}
+    </svg>
   );
 }
 
