@@ -280,6 +280,7 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
               <li key={l.label}>
                 <a
                   href={l.href}
+                  {...(l.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                   className="contact-row t-label grid grid-cols-[88px_1fr_auto] items-center gap-3 py-4 text-[11px] md:grid-cols-[120px_1fr_auto]"
                 >
                   <span className="normal-case">{l.label}</span>
