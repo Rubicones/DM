@@ -668,7 +668,7 @@ export class RailEngine {
     if (this.frameEma > PERF_BUDGET.frameMs && !capped) {
       this.overMs += dtMs;
       this.comfyMs = 0;
-      if (this.overMs > PERF_BUDGET.downgradeAfterMs && !quality.locked) {
+      if (this.overMs > (IS_TOUCH ? PERF_BUDGET.touchDowngradeAfterMs : PERF_BUDGET.downgradeAfterMs) && !quality.locked) {
         quality.step(-1);
         this.overMs = 0;
         this.blendKey = '';

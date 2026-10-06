@@ -37,10 +37,21 @@ export function useRailSound(engine: RailEngine): SoundControl {
   const [pending, setPending] = useState(false);
   const sys = useRef<SoundSystem | null>(null);
 
-  /** Created synchronously inside the gesture (autoplay policy), reused afterwards. */
+  /**
+   * Created synchronously inside the gesture (autoplay policy), reused afterwards.
+   * A one-sample silent buffer started in the same gesture unlocks older iOS WebKit.
+   */
   const unlock = () => {
     const c = new AudioContext({ latencyHint: 'interactive' });
-    void c.resume();
+    void c.resume().catch(() => undefined);
+    try {
+      const src = c.createBufferSource();
+      src.buffer = c.createBuffer(1, 1, c.sampleRate);
+      src.connect(c.destination);
+      src.start(0);
+    } catch {
+      /* not needed on current engines */
+    }
     return c;
   };
 
@@ -55,7 +66,9 @@ export function useRailSound(engine: RailEngine): SoundControl {
   useEffect(() => {
     let cleanupGesture: (() => void) | null = null;
     if (read()) {
-      // Remembered "on": still needs a gesture (autoplay policy) — first click / key / touch starts it.
+      // Remembered "on": still needs a gesture (autoplay policy) — first tap / click / key starts it.
+      // Only activation events count: touchstart / pointerdown (and a touch that becomes a scroll) don't,
+      // so a context created there would stay locked. SoundSystem keeps resuming on later taps anyway.
       const startOnGesture = () => {
         cleanupGesture?.();
         cleanupGesture = null;
@@ -67,7 +80,7 @@ export function useRailSound(engine: RailEngine): SoundControl {
             setOn(true);
           });
       };
-      const events = ['pointerdown', 'keydown', 'touchstart'] as const;
+      const events = ['pointerup', 'touchend', 'click', 'keydown'] as const;
       events.forEach((ev) => window.addEventListener(ev, startOnGesture, { once: true, passive: true }));
       cleanupGesture = () => events.forEach((ev) => window.removeEventListener(ev, startOnGesture));
       queueMicrotask(() => setPending(true));
@@ -85,7 +98,10 @@ export function useRailSound(engine: RailEngine): SoundControl {
   const toggle = () => {
     if (pending) {
       setPending(false);
-      if (sys.current?.running) return setOn(true);
+      if (sys.current?.running) {
+        sys.current.resume(); // inside this tap → unlocks a context created by an earlier non-activating gesture
+        return setOn(true);
+      }
       const ctx = unlock();
       void ensure()
         .then((s) => s.start(ctx))

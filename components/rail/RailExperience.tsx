@@ -71,8 +71,11 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
     };
   }, []);
 
+  // a plan for another mode (hydration renders desktop first; a build finishing after the
+  // switch to mobile would otherwise leave the mobile rail on the boot geometry) → rebuild
+  const needsPlan = measuring || full?.geo.mode !== mode;
   useIsoLayoutEffect(() => {
-    if (!measuring) return;
+    if (!needsPlan) return;
     // one batch of layout reads, no writes in between
     const sizes: Record<string, Size> = {};
     // mobile: panels open above the pinned rider, not beside the rail → card sizes don't shape the route
@@ -97,7 +100,7 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
       setFull({ geo: g, sizes });
       setMeasuring(false);
     });
-  }, [measuring, measureKey, mode, engine]);
+  }, [needsPlan, measureKey, mode, engine]);
 
   // mode switch → measure again
   const lastMode = useRef(mode);
@@ -120,8 +123,16 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
     [engine],
   );
 
-  // scroll distance = scroll map total (linear arc length + mobile reading dwells)
+  // scroll distance = scroll map total (arc length + station brakes + mobile reading dwells)
   const scrollLength = Math.round(geo.scrollMap.total);
+  // stops: page scroll settles on a station when a slow scroll ends near it (proximity snap; flings pass)
+  const snap = L.stop.snap && geo.complete;
+  useEffect(() => {
+    if (!snap) return;
+    const html = document.documentElement;
+    html.classList.add('rail-snap');
+    return () => html.classList.remove('rail-snap');
+  }, [snap]);
   const sizes = full?.sizes;
   const stageVars = mobile
     ? ({
@@ -136,6 +147,7 @@ export function RailExperience({ onToggleView }: { onToggleView: () => void }) {
   return (
     // Tall spacer: provides scroll distance only (lvh → the full range is reachable with or without the mobile toolbar).
     <main className="relative" style={{ height: `calc(${scrollLength}px + 100lvh)` }}>
+      {snap && geo.scrollMap.stops.map((top, i) => <div key={i} className="snap-stop" style={{ top: Math.round(top) }} aria-hidden />)}
       <div
         ref={engine.bind('stage')}
         className={`stage sticky top-0 h-svh w-full overflow-clip bg-bg text-fg ${measuring ? 'measuring' : ''}`}

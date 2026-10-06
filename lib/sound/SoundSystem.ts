@@ -11,7 +11,14 @@
  *
  * Buffers are pre-rendered once on enable. Engines further than ±1 chapter
  * are disposed (oscillators/noise loops stopped). The context is suspended
- * when the tab is hidden or the rider has been still for a few seconds.
+ * when the tab is hidden or (mouse devices) the rider has been still for a few
+ * seconds.
+ *
+ * Mobile: a scroll is not a user activation, so iOS / Android only let a
+ * context (re)start inside a tap. Touch devices therefore never idle-suspend,
+ * and while sound is on every tap / key re-resumes a context that is
+ * suspended or 'interrupted' (iOS: calls, Siri, app switch, first touch that
+ * turned out to be a scroll).
  */
 import { chapters } from '@/config/content';
 import { soundConfig } from '@/config/sound';
@@ -32,8 +39,11 @@ const FACTORIES: Record<SoundEngineId, EngineFactory> = {
   pencil,
 };
 
-/** Suspend the AudioContext after this long without movement (ms). */
+/** Suspend the AudioContext after this long without movement (ms). Mouse devices only. */
 const SUSPEND_AFTER_MS = 3500;
+/** Events that count as user activation (audio unlock) — touchstart / pointerdown on touch do not. */
+const GESTURES = ['pointerup', 'touchend', 'click', 'keydown'] as const;
+const IS_TOUCH = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
 
 interface Slot {
   id: ThemeId;
@@ -71,7 +81,7 @@ export class SoundSystem {
   async start(existing?: AudioContext) {
     if (this.ctx) {
       if (existing && existing !== this.ctx) void existing.close(); // duplicate unlock from a double gesture
-      await this.ctx.resume();
+      this.resume();
       return;
     }
     const ctx = existing ?? new AudioContext({ latencyHint: 'interactive' });
@@ -95,15 +105,40 @@ export class SoundSystem {
     this.master = master;
     this.limiter = limiter;
     this.lastChapter = -2;
-    await ctx.resume();
+    // wire everything first: resume() stays pending (never rejects) until a real activation
+    // — awaiting it here would leave sound dead after a gesture that turned out to be a scroll
     document.addEventListener('visibilitychange', this.onVisibility);
+    GESTURES.forEach((ev) => window.addEventListener(ev, this.onGesture, { capture: true, passive: true }));
     this.unsubscribe = this.rail.addFrameListener(this.onFrame);
+    this.resume();
   }
+
+  /**
+   * Resume if suspended / interrupted. Inside a gesture handler this also
+   * unlocks iOS — so gestures always call it; per-frame calls only retry once
+   * the previous attempt has settled.
+   */
+  resume(fromGesture = true) {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state === 'running' || ctx.state === 'closed' || document.hidden) return;
+    if (!fromGesture && this.resuming) return;
+    this.resuming = true;
+    void ctx
+      .resume()
+      .catch(() => undefined)
+      .finally(() => {
+        this.resuming = false;
+      });
+  }
+
+  private resuming = false;
+  private onGesture = () => this.resume();
 
   async stop() {
     this.unsubscribe?.();
     this.unsubscribe = null;
     document.removeEventListener('visibilitychange', this.onVisibility);
+    GESTURES.forEach((ev) => window.removeEventListener(ev, this.onGesture, { capture: true }));
     window.clearTimeout(this.suspendTimer);
     const ctx = this.ctx;
     if (!ctx) return;
@@ -131,6 +166,7 @@ export class SoundSystem {
 
   private onVisibility = () => {
     if (document.hidden) void this.ctx?.suspend();
+    else this.resume(false);
   };
 
   /** Keep only engines for themes within ±1 chapter. Runs on chapter change only. */
@@ -165,8 +201,8 @@ export class SoundSystem {
     const speed = Math.abs(f.velocity);
     if (speed > 0) {
       this.lastMoveAt = performance.now();
-      if (ctx.state === 'suspended' && !document.hidden) void ctx.resume();
-      if (!this.suspendTimer) this.suspendTimer = window.setTimeout(this.checkIdle, SUSPEND_AFTER_MS);
+      if (ctx.state !== 'running') this.resume(false);
+      if (!IS_TOUCH && !this.suspendTimer) this.suspendTimer = window.setTimeout(this.checkIdle, SUSPEND_AFTER_MS);
     }
     if (ctx.state !== 'running') return;
     if (f.chapterIndex !== this.lastChapter) {
