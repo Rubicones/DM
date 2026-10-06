@@ -404,9 +404,10 @@ body {
 .station.unplaced { visibility: hidden; }
 .station .card { contain: layout style; }
 @media (min-width: 768px) {
-  .station[data-size="sm"] { width: 400px; }
-  .station[data-size="md"] { width: 520px; }
-  .station[data-size="lg"] { width: 620px; }
+  /* wide rather than tall: a card must fit the screen beside the rider */
+  .station[data-size="sm"] { width: 420px; }
+  .station[data-size="md"] { width: 580px; }
+  .station[data-size="lg"] { width: 640px; }
 }
 
 /* Reveal style is pure tokens: hidden transform, transition easing, keyframe name. */

@@ -76,6 +76,9 @@ const PROGRESS_LERP_TOUCH = 0.6;
 const PROGRESS_LERP_WHEEL = 0.32;
 /** Camera catch-up (desktop framing shifts between stations). Mobile: locked to the rider. */
 const CAMERA_LERP = 0.3;
+/** Desktop: the rider never comes closer than this to the screen edges (top bar / HUD ≈ 60px + room). */
+const RIDER_SAFE_Y = 120;
+const RIDER_SAFE_X = 80;
 /** All textures share this cell size so the camera offset modulo works for each. */
 export const TEXTURE_CELL = 44;
 /** Scene stays mounted this far (progress) before its chapter, to preload + compile shaders. */
@@ -600,8 +603,16 @@ export class RailEngine {
       const kl = 1 - Math.pow(1 - 0.06, f);
       this.look.x += ((dxT / dl) * reach - this.look.x) * kl;
       this.look.y += ((dyT / dl) * reach - this.look.y) * kl;
-      const tx = p.x + frame.x + this.look.x;
-      const ty = p.y + frame.y + this.look.y;
+      let tx = p.x + frame.x + this.look.x;
+      let ty = p.y + frame.y + this.look.y;
+      if (geo.mode === 'desktop') {
+        // a card taller than the screen must never frame the rider out of view:
+        // the rider's screen position stays inside the band between the bars
+        const my = Math.min(RIDER_SAFE_Y, this.vh * 0.25);
+        const mx = Math.min(RIDER_SAFE_X, this.vw * 0.25);
+        ty = clamp(ty, p.y - (this.vh * (1 - L.camera.y) - my), p.y + (this.vh * L.camera.y - my));
+        tx = clamp(tx, p.x - (this.vw * (1 - L.camera.x) - mx), p.x + (this.vw * L.camera.x - mx));
+      }
       if (!this.camReady) {
         this.cam.x = tx;
         this.cam.y = ty;

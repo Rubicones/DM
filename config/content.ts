@@ -157,6 +157,8 @@ export interface WanderConfig {
   chapterLead: number;
   /** Random candidates tried per station (more = better fits, slower build). */
   candidates: number;
+  /** Cards taller than this sit beside a vertical run (left/right), never above/below a horizontal one — the rider stays in view. */
+  tallCard: number;
 }
 
 /** Reading time: extra scroll distance per station during which the rider barely moves. */
@@ -269,6 +271,7 @@ export const railLayout: {
       cardSpacing: 48,
       chapterLead: 700,
       candidates: 64,
+      tallCard: 400,
     },
     curves: { radius: 280, amplitude: 46, wavelength: 900 },
     dwell: { enabled: false, base: 0, perChar: 0, min: 0, max: 0, creep: 1 },
@@ -297,6 +300,7 @@ export const railLayout: {
       cardSpacing: 300,
       chapterLead: 900,
       candidates: 64,
+      tallCard: Infinity, // mobile: cards open in the screen-fixed panel, not beside the rail
     },
     curves: { radius: 340, amplitude: 70, wavelength: 1100 },
     dwell: { enabled: true, base: 140, perChar: 0.45, min: 160, max: 700, creep: 0.3 },

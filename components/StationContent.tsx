@@ -49,7 +49,7 @@ function Skills({ items }: { items: NonNullable<FeatureStation['skills']> }) {
   return (
     <dl className="t-divide t-rule-y mt-5">
       {items.map((k) => (
-        <div key={k.name} className="grid gap-2 py-3 md:grid-cols-[minmax(0,11em)_1fr] md:gap-4">
+        <div key={k.name} className="grid gap-1.5 py-2 md:grid-cols-[minmax(0,10em)_1fr] md:items-center md:gap-4">
           <dt className="t-body-sm font-bold">{k.name}</dt>
           <dd>
             <span className="sr-only">Used in: </span>
@@ -57,7 +57,7 @@ function Skills({ items }: { items: NonNullable<FeatureStation['skills']> }) {
               {k.projects.map((id) => {
                 const p = stationById.get(id)?.station;
                 return p ? (
-                  <li key={id} className="tag t-label px-2 py-1 text-[10px] md:text-[11px]">
+                  <li key={id} className="tag t-label px-1.5 py-0.5 text-[10px]">
                     {p.kind === 'project' ? p.title : id}
                   </li>
                 ) : null;
@@ -91,7 +91,7 @@ function ProjectVisual({ p }: { p: ProjectStation }) {
   const ink = inkOn(p.color);
   return (
     <div
-      className="visual project-tile relative aspect-[16/7] w-full overflow-hidden"
+      className="visual project-tile relative aspect-[16/7] w-full overflow-hidden md:aspect-[16/4.5]"
       style={{ background: p.color, color: ink, borderColor: ink === '#0A0A0A' ? undefined : p.color }}
       aria-hidden
     >
@@ -170,7 +170,7 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
           </h3>
           <ol className="t-divide t-rule-y mt-5">
             {s.items.map((item, i) => (
-              <li key={i} className="grid grid-cols-[auto_1fr] gap-x-4 py-3">
+              <li key={i} className="grid grid-cols-[auto_1fr] gap-x-4 py-2.5">
                 <span className="t-index t-label mt-0.5 px-1.5 text-[11px] font-bold leading-5" aria-hidden>
                   {pad(i + 1)}
                 </span>

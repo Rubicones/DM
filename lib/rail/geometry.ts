@@ -392,6 +392,7 @@ function* planRouteSteps(
     nextCi: number,
     limit: number,
     budgetHard: boolean,
+    tallStrict: boolean,
   ): Candidate | null => {
     const size = mode === 'mobile' ? { w: 0, h: 0 } : bucket(sizeOf(id));
     const eLead = envelope(geoms[ci], 'lead', cps[ci]);
@@ -445,6 +446,8 @@ function* planRouteSteps(
     // station leg continues the last run (no extra turn)
     const sdir = d;
     const horiz = !isVert(sdir);
+    // tall card above/below a horizontal run → card + gap exceed the screen and the rider drops out of view
+    if (tallStrict && horiz && !last && size.h > W.tallCard) return null;
     const extent = horiz ? size.w : size.h;
     // leg overhangs the card by clearance + curve envelope, so the next turn can pass the card
     const slen = stationLegLen(sdir);
@@ -550,13 +553,22 @@ function* planRouteSteps(
       const nextCi = si < ch.stations.length - 1 || ci === chapters.length - 1 ? ci : ci + 1;
       let chosen: Candidate | null = null;
       let fallback: Candidate | null = null;
-      // [length relax, hard turn budget, candidate multiplier] — later rounds search harder
-      const rounds: [number, boolean, number][] = [[1, true, 1], [1.4, true, 1], [0.8, false, 2], [2, false, 2], [0.6, false, 4], [2.6, false, 4]];
-      for (const [relax, budgetHard, mult] of rounds) {
+      // [length relax, hard turn budget, candidate multiplier, tall cards on vertical runs only] — later rounds search harder
+      const rounds: [number, boolean, number, boolean][] = [
+        [1, true, 1, true],
+        [1.4, true, 1, true],
+        [0.8, false, 2, true],
+        [2, false, 2, true],
+        [0.6, false, 4, true],
+        [2.6, false, 4, true],
+        [1, false, 4, false],
+        [2, false, 4, false],
+      ];
+      for (const [relax, budgetHard, mult, tallStrict] of rounds) {
         let bestValid: Candidate | null = null;
         let valid = 0;
         for (let a = 0; a < W.candidates * mult; a++) {
-          const c = makeCandidate(ci, st.id, last, chapterFirst, relax, nextCi, fallback ? fallback.violation : Infinity, budgetHard);
+          const c = makeCandidate(ci, st.id, last, chapterFirst, relax, nextCi, fallback ? fallback.violation : Infinity, budgetHard, tallStrict);
           if (!c) continue;
           if (c.violation === 0) {
             valid++;

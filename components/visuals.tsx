@@ -89,7 +89,7 @@ const STAR = (cx: number, cy: number, R: number) => {
 
 function Frame({ children, label, seed = 11 }: { children: React.ReactNode; label?: string; seed?: number }) {
   return (
-    <div className="visual relative aspect-[16/7] w-full overflow-hidden" aria-hidden>
+    <div className="visual relative aspect-[16/7] w-full overflow-hidden md:aspect-[16/5]" aria-hidden>
       <SketchOutline seed={seed} />
       {label && <span className="t-label absolute left-3 top-3 text-[10px] text-muted">{label}</span>}
       {children}
