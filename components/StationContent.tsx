@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from 'react';
 import type { FeatureStation, ProjectStation, Station } from '@/config/content';
-import { projectNumber } from '@/lib/content-index';
+import { projectNumber, stationById } from '@/lib/content-index';
 import { pad } from '@/lib/rail/format';
 import { Visual } from './visuals';
 
@@ -44,27 +44,29 @@ function Tags({ items, label, filledFirst }: { items: string[]; label: string; f
   );
 }
 
-const LEVEL = ['', 'Learning', 'Working knowledge', 'Proficient', 'Advanced', 'Expert'] as const;
-
-/** Technology + 5-step proficiency meter. */
+/** Technology → the projects it was used in (project titles from the content index). */
 function Skills({ items }: { items: NonNullable<FeatureStation['skills']> }) {
   return (
-    <ul className="t-divide t-rule-y mt-5" aria-label="Technologies and proficiency">
+    <dl className="t-divide t-rule-y mt-5">
       {items.map((k) => (
-        <li key={k.name} className="skill-row flex items-center gap-3 py-2">
-          <span className="t-body-sm min-w-0 flex-1 font-bold">{k.name}</span>
-          <span className="skill-meter" aria-hidden>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <span key={i} data-on={i <= k.level ? '' : undefined} />
-            ))}
-          </span>
-          <span className="t-label w-[9.5em] text-right text-[10px] text-muted md:text-[11px]">
-            {LEVEL[k.level]}
-            <span className="sr-only"> ({k.level} of 5)</span>
-          </span>
-        </li>
+        <div key={k.name} className="grid gap-2 py-3 md:grid-cols-[minmax(0,11em)_1fr] md:gap-4">
+          <dt className="t-body-sm font-bold">{k.name}</dt>
+          <dd>
+            <span className="sr-only">Used in: </span>
+            <ul className="flex flex-wrap gap-2">
+              {k.projects.map((id) => {
+                const p = stationById.get(id)?.station;
+                return p ? (
+                  <li key={id} className="tag t-label px-2 py-1 text-[10px] md:text-[11px]">
+                    {p.kind === 'project' ? p.title : id}
+                  </li>
+                ) : null;
+              })}
+            </ul>
+          </dd>
+        </div>
       ))}
-    </ul>
+    </dl>
   );
 }
 

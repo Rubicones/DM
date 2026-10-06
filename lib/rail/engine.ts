@@ -70,8 +70,12 @@ export type SceneTicker = (now: number, dt: number) => boolean;
 type StationState = 'hidden' | 'active' | 'passed';
 type Listener<T> = (v: T) => void;
 
-const PROGRESS_LERP = 0.14;
-const CAMERA_LERP = 0.16;
+/** Per-frame catch-up toward the scroll position. Touch scrolling is already smooth (native
+ * momentum) → near-direct; wheels step in notches → a little smoothing. */
+const PROGRESS_LERP_TOUCH = 0.6;
+const PROGRESS_LERP_WHEEL = 0.32;
+/** Camera catch-up (desktop framing shifts between stations). Mobile: locked to the rider. */
+const CAMERA_LERP = 0.3;
 /** All textures share this cell size so the camera offset modulo works for each. */
 export const TEXTURE_CELL = 44;
 /** Scene stays mounted this far (progress) before its chapter, to preload + compile shaders. */
@@ -577,7 +581,7 @@ export class RailEngine {
         this.spikeHeld = false;
         this.target = raw;
       }
-      const kp = 1 - Math.pow(1 - PROGRESS_LERP, f);
+      const kp = 1 - Math.pow(1 - (IS_TOUCH ? PROGRESS_LERP_TOUCH : PROGRESS_LERP_WHEEL), f);
       this.current += (this.target - this.current) * kp;
       if (Math.abs(this.target - this.current) * geo.total < 0.25) this.current = this.target;
       const len = this.current * geo.total;
@@ -603,7 +607,7 @@ export class RailEngine {
         this.cam.y = ty;
         this.camReady = true;
       } else {
-        const kc = 1 - Math.pow(1 - CAMERA_LERP, f);
+        const kc = geo.mode === 'mobile' ? 1 : 1 - Math.pow(1 - CAMERA_LERP, f);
         this.cam.x += (tx - this.cam.x) * kc;
         this.cam.y += (ty - this.cam.y) * kc;
       }
