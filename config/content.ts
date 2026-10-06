@@ -231,9 +231,9 @@ export const mobileLayout = {
   /** Gap between the bottom of the content zone (where cards are centred) and the rider. */
   panelGap: '28px',
   /** The panel fades in this much arc length (screen px) before the rider reaches the station… */
-  panelLead: 40,
+  panelLead: 120,
   /** …and fades out this much arc length after the reading dwell ends. */
-  panelHold: 120,
+  panelHold: 320,
 };
 
 export const railLayout: {
@@ -277,7 +277,7 @@ export const railLayout: {
     },
     curves: { radius: 280, amplitude: 46, wavelength: 900, continuous: false },
     dwell: { enabled: false, base: 0, perChar: 0, min: 0, max: 0, creep: 1 },
-    stop: { brake: 160, release: 140, creep: 0.7, snap: false },
+    stop: { brake: 160, release: 50, creep: 0.7, snap: false },
   },
   mobile: {
     // rider pinned bottom-centre; panels open above it
@@ -305,9 +305,10 @@ export const railLayout: {
       tallCard: Infinity, // mobile: cards open in the screen-fixed panel, not beside the rail
     },
     curves: { radius: 340, amplitude: 70, wavelength: 1100, continuous: false },
-    // twice the scroll distance of desktop-like tuning: one quick swipe covers a stop or two, not the site
-    dwell: { enabled: true, base: 280, perChar: 0.9, min: 320, max: 1400, creep: 0.15 },
-    stop: { brake: 300, release: 240, creep: 0.15, snap: false },
+    // stops only brake (a slow scroll comes to rest at the card, a fast one carries through);
+    // after the card the scroll is ordinary again — no reading dwell, only a short ease-out
+    dwell: { enabled: false, base: 0, perChar: 0, min: 0, max: 0, creep: 1 },
+    stop: { brake: 300, release: 60, creep: 0.15, snap: false },
   },
 };
 
