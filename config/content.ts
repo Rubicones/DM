@@ -563,7 +563,7 @@ export const chapters: Chapter[] = [
         description:
           'An empathetic, accessible landing page focusing on user psychological comfort. Features interactive 3D WebGL elements that react to scroll, built on Astro Islands architecture for 100% Lighthouse performance without sacrificing heavy visual graphics.',
         stack: ['Astro', 'Three.js (R3F)', 'Tailwind CSS', 'Framer Motion'],
-        link: { label: 'alevtina-psy.com', href: 'https://alevtina-psy.com' },
+        link: { label: 'alevtyna-psy.com', href: 'https://alevtyna-psy.com' },
         color: '#b097f9',
         icon: '/projects/alevtyna.svg',
       },
