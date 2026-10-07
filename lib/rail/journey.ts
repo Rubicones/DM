@@ -12,8 +12,10 @@ const DURATION = 1150;
 export const JUMP_MS = DURATION;
 export const LAND_AT = 0.84;
 
-export function jumpIntoRider(dot: HTMLElement, riderDot: HTMLElement): Promise<void> {
-  const a = dot.getBoundingClientRect();
+/** `reverse`: the same flight played backwards — the rider leaps off the rail back into the full stop. */
+export function jumpIntoRider(dot: HTMLElement, riderDot: HTMLElement, reverse = false, dotRect?: DOMRectReadOnly): Promise<void> {
+  // `dotRect`: where the full stop sat when the journey started (the way back lands exactly there)
+  const a = dotRect ?? dot.getBoundingClientRect();
   const b = riderDot.getBoundingClientRect();
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduced || !a.width || !b.width || typeof dot.animate !== 'function') return Promise.resolve();
@@ -66,7 +68,7 @@ export function jumpIntoRider(dot: HTMLElement, riderDot: HTMLElement): Promise<
       { offset: 0.93, transform: t(dx, dy, 0.94, 1.08, 360), backgroundColor: red, borderWidth, borderColor, boxShadow: shadow, easing: 'ease-in-out' },
       { offset: 1, transform: t(dx, dy, 1, 1, 360), backgroundColor: red, borderWidth, borderColor, boxShadow: shadow },
     ],
-    { duration: DURATION, fill: 'forwards' },
+    { duration: DURATION, fill: 'forwards', direction: reverse ? 'reverse' : 'normal' },
   );
 
   return anim.finished

@@ -118,7 +118,8 @@ export function RailExperience({ onToggleView, initialMobile = false }: { onTogg
 
   // ── "Start journey": the page is locked on the intro until the visitor taps it; the tap
   // turns sound on (the gesture browsers require) and the intro's full stop jumps onto the rail
-  const [journey, setJourney] = useState<'idle' | 'jumping' | 'done'>('idle');
+  // idle → jumping → done; and back: done → returning → idle (scrolling up at the start, see below)
+  const [journey, setJourney] = useState<'idle' | 'jumping' | 'done' | 'returning'>('idle');
   useEffect(() => {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
@@ -129,12 +130,44 @@ export function RailExperience({ onToggleView, initialMobile = false }: { onTogg
     document.documentElement.classList.toggle('journey-locked', locked);
     return () => document.documentElement.classList.remove('journey-locked');
   }, [journey, engine]);
+  const dotHome = useRef<DOMRect | null>(null);
+  useEffect(() => {
+    // a remembered position is only valid for this layout
+    let w = window.innerWidth;
+    const onResize = () => {
+      if (window.innerWidth !== w) dotHome.current = null;
+      w = window.innerWidth;
+    };
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // no scrolling while the full stop is in flight (either way)
+  const flying = journey === 'jumping' || journey === 'returning';
+  useEffect(() => {
+    if (!flying) return;
+    const block = (e: Event) => e.cancelable && e.preventDefault();
+    const onKey = (e: KeyboardEvent) => {
+      if ([' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) e.preventDefault();
+    };
+    window.addEventListener('wheel', block, { passive: false });
+    window.addEventListener('touchmove', block, { passive: false });
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('wheel', block);
+      window.removeEventListener('touchmove', block);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [flying]);
+
   const startJourney = () => {
     if (journey !== 'idle') return;
     sound.start();
     // rects are read now, before the dot is hidden by the state change
     const dot = engine.dom.stage?.querySelector<HTMLElement>('[data-station="intro"] .intro-dot');
     const riderDot = engine.dom.rider?.querySelector<HTMLElement>('.rider-dot');
+    // remember where the full stop sits — the way back lands exactly here
+    dotHome.current = dot?.getBoundingClientRect() ?? null;
     const landed = dot && riderDot ? jumpIntoRider(dot, riderDot) : null;
     // (reduced motion: jumpIntoRider resolves at once, no flight → no flight sounds)
     if (landed && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -157,6 +190,83 @@ export function RailExperience({ onToggleView, initialMobile = false }: { onTogg
     });
     return () => engine.setLockedNavigate(null);
   }, [engine, journey, sound]);
+  // ── Back to the start: only when the journey is running, the visitor has already been further
+  // down, the page is back at the very top, and they keep scrolling UP (wheel, trackpad incl. momentum,
+  // a finger dragging down, ↑/PageUp/Home) — a casual scroll up past the top is enough. The flight plays in reverse into
+  // the full stop, the start buttons come back and the sounds play backwards.
+  const leftStart = useRef(false);
+  useEffect(
+    () =>
+      engine.addFrameListener((f) => {
+        if (f.progress > 0.003) leftStart.current = true;
+      }),
+    [engine],
+  );
+  useEffect(() => {
+    if (journey !== 'done') return;
+    const returnToStart = () => {
+      leftStart.current = false;
+      // land exactly where the dot rests: lock the page now (scrollbar change happens before we
+      // measure) and finish the intro card's in-flight transitions (it is still sliding back from
+      // its 'passed' state when the visitor scrolls up right away), then read the rects
+      engine.setLocked(true);
+      document.documentElement.classList.add('journey-locked');
+      const intro = engine.dom.stage?.querySelector<HTMLElement>('[data-station="intro"]');
+      intro?.getAnimations?.({ subtree: true }).forEach((a) => {
+        try {
+          if (a.effect?.getComputedTiming().iterations !== Infinity) a.finish();
+        } catch {
+          /* not finishable */
+        }
+      });
+      const dot = intro?.querySelector<HTMLElement>('.intro-dot');
+      const riderDot = engine.dom.rider?.querySelector<HTMLElement>('.rider-dot');
+      const back = dot && riderDot ? jumpIntoRider(dot, riderDot, true, dotHome.current ?? undefined) : null;
+      if (back && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        // reversed timeline: the lift-off happens (1 − LAND_AT) into the flight
+        const liftOff = JUMP_MS * (1 - LAND_AT);
+        sound.reverseJump(liftOff, (JUMP_MS - liftOff) / 1000);
+      }
+      setJourney('returning');
+      void (back ?? Promise.resolve()).then(() => setJourney('idle'));
+    };
+    const standing = () => leftStart.current && engine.atStart;
+    let baseY = -1;
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY < 0 && standing()) returnToStart();
+    };
+    const onTouchStart = (e: TouchEvent) => {
+      baseY = standing() ? (e.touches[0]?.clientY ?? -1) : -1;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0]?.clientY;
+      if (y === undefined) return;
+      // the drag may reach the top mid-gesture: measure from the moment the page hit the top
+      if (!standing()) {
+        baseY = -1;
+        return;
+      }
+      if (baseY < 0) baseY = y;
+      if (y - baseY > 16) {
+        baseY = -1;
+        returnToStart();
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'ArrowUp' || e.key === 'PageUp' || e.key === 'Home') && standing()) returnToStart();
+    };
+    window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [journey, engine, sound]);
+
   const idle = journey === 'idle';
   const startButton = (
     <div className="journey-actions" aria-hidden={idle ? undefined : true}>

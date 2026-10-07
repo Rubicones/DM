@@ -120,12 +120,12 @@ export class SoundSystem {
    * Rising whoosh for the start jump — the human-first pencil noise (same looped
    * pink noise) through a band-pass sweeping up while it swells, cut at landing.
    */
-  playRise(seconds: number) {
+  playRise(seconds: number, reverse = false, delay = 0) {
     const ctx = this.ctx;
     const master = this.master;
     const bank = this.bank;
     if (!ctx || !master || !bank) return;
-    const t0 = ctx.currentTime + LOOKAHEAD;
+    const t0 = ctx.currentTime + LOOKAHEAD + delay;
     const t1 = t0 + seconds;
     const src = ctx.createBufferSource();
     src.buffer = bank.noise;
@@ -133,12 +133,23 @@ export class SoundSystem {
     const bp = ctx.createBiquadFilter();
     bp.type = 'bandpass';
     bp.Q.value = 1.3;
-    bp.frequency.setValueAtTime(400, t0);
-    bp.frequency.exponentialRampToValueAtTime(5200, t1);
     const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.32, t0 + seconds * 0.9);
-    g.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.05);
+    if (!reverse) {
+      bp.frequency.setValueAtTime(400, t0);
+      bp.frequency.exponentialRampToValueAtTime(5200, t1);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.32, t0 + seconds * 0.9);
+      g.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.05);
+    } else {
+      // way back: the sweep falls, but the swell still builds toward the END and is cut
+      // exactly when the flight ends (the dot lands back in the name)
+      bp.frequency.setValueAtTime(5200, t0);
+      bp.frequency.exponentialRampToValueAtTime(400, t1);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.32, t0 + seconds * 0.9);
+      g.gain.setValueAtTime(0.32, t1 - 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t1);
+    }
     src.connect(bp).connect(g).connect(master);
     src.onended = () => {
       src.disconnect();
@@ -149,14 +160,19 @@ export class SoundSystem {
     src.stop(t1 + 0.08);
   }
 
-  /** One-shot "latch" — the rider snapping onto the rail at the end of the start jump. */
-  playLatch() {
+  /** One-shot "latch" — the rider snapping onto the rail at the end of the start jump (reverse: leaving it). */
+  playLatch(reverse = false) {
     const ctx = this.ctx;
     const master = this.master;
     const bank = this.bank;
     if (!ctx || !master || !bank) return;
     this.resume(false);
-    playBuffer(ctx, bank.latch, master, 1, 0.7);
+    playBuffer(ctx, reverse ? bank.latchRev : bank.latch, master, 1, 0.7);
+  }
+
+  /** Length of the latch sample, s (to line the reversed one up with the lift-off). */
+  get latchSeconds() {
+    return this.bank?.latch.duration ?? 0.12;
   }
 
   /**

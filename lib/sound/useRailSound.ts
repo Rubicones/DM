@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { RailEngine } from '@/lib/rail/engine';
+import { LOOKAHEAD } from './dsp';
 import type { SoundSystem } from './SoundSystem';
 
 export interface SoundControl {
@@ -13,6 +14,11 @@ export interface SoundControl {
   latch: () => void;
   /** Rising whoosh over the jump (call right after `start`, inside the same gesture). */
   rise: (seconds: number) => void;
+  /**
+   * The start jump in reverse (rider back into the intro's full stop): reversed latch whose
+   * snap lands `liftOffMs` in, then a falling whoosh over `seconds`. Only if sound is running.
+   */
+  reverseJump: (liftOffMs: number, seconds: number) => void;
 }
 
 /**
@@ -78,5 +84,13 @@ export function useRailSound(engine: RailEngine): SoundControl {
   // queued behind start()'s ensure() → the context exists by the time it runs
   const rise = (seconds: number) => void ensure().then((s) => s.playRise(seconds));
 
-  return { on, start, toggle, latch, rise };
+  const reverseJump = (liftOffMs: number, seconds: number) => {
+    const s = sys.current;
+    if (!s?.running) return;
+    window.setTimeout(() => s.playLatch(true), Math.max(0, liftOffMs + 45 - s.latchSeconds * 1000));
+    // playRise schedules LOOKAHEAD ahead → take it off so the sweep ends exactly with the flight
+    s.playRise(seconds, true, Math.max(0, liftOffMs / 1000 - LOOKAHEAD));
+  };
+
+  return { on, start, toggle, latch, rise, reverseJump };
 }

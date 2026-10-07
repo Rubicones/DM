@@ -9,6 +9,8 @@ export interface BufferBank {
   clicks: AudioBuffer[];
   /** One-shot: the rider latching onto the rail at the end of the "Start journey" jump. */
   latch: AudioBuffer;
+  /** `latch` reversed — the return to the start. */
+  latchRev: AudioBuffer;
   bass: AudioBuffer[];
   noise: AudioBuffer;
   grain: AudioBuffer;
@@ -77,5 +79,11 @@ export function renderBank(ctx: BaseAudioContext, rng: () => number): BufferBank
     return snap + ring + seat;
   });
 
-  return { clicks, latch, bass: [pluck(55), pluck(68), pluck(82)], noise, grain };
+  // the latch played backwards (rider leaving the rail on the way back to the start)
+  const latchRev = ctx.createBuffer(1, latch.length, latch.sampleRate);
+  const lf = latch.getChannelData(0);
+  const lr = latchRev.getChannelData(0);
+  for (let i = 0; i < lf.length; i++) lr[i] = lf[lf.length - 1 - i];
+
+  return { clicks, latch, latchRev, bass: [pluck(55), pluck(68), pluck(82)], noise, grain };
 }

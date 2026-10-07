@@ -216,6 +216,11 @@ export class RailEngine {
   }
 
   private scroller: HTMLElement | null = null;
+  /** Page scrolled to the very top (the rider may still be easing in — the way back starts from wherever it is). */
+  get atStart() {
+    return !!this.geo && this.scrollY <= 2;
+  }
+
   private get scrollY() {
     return this.scroller ? this.scroller.scrollTop : window.scrollY;
   }
