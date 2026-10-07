@@ -5,7 +5,8 @@
 import { renderBuffer } from './dsp';
 
 export interface BufferBank {
-  click: AudioBuffer;
+  /** General tap — a few slightly different variants (picked at random per tick, like the 3D plucks). */
+  clicks: AudioBuffer[];
   /** One-shot: the rider latching onto the rail at the end of the "Start journey" jump. */
   latch: AudioBuffer;
   bass: AudioBuffer[];
@@ -17,20 +18,23 @@ export function renderBank(ctx: BaseAudioContext, rng: () => number): BufferBank
   // general click: soft tactile tap, set fairly high (~2.4 kHz) — a "tock" carries it, the press /
   // release edges are only a hint (double edge ~3.5 ms apart = tactile, but
   // low and quiet so it doesn't read as clicky). No low-mid body → still light.
-  let hp = 0;
-  let prev = 0;
-  const RELEASE = 0.0035;
+  // Variants differ a little in tock pitch / ring and in the press→release gap.
   const edge = (t: number, a: number) => (t < 0 ? 0 : a);
-  const click = renderBuffer(ctx, 0.018, (t) => {
-    const n = rng() * 2 - 1;
-    hp = 0.6 * (hp + n - prev); // steeper high-pass → only the "snap" of the noise
-    prev = n;
-    const press = hp * Math.exp(-t / 0.0004) * 0.3 + Math.sin(2 * Math.PI * 4400 * t) * Math.exp(-t / 0.0004) * 0.2;
-    const tock = Math.sin(2 * Math.PI * 2400 * t) * Math.exp(-t / 0.0018) * 0.42;
-    const r = t - RELEASE;
-    const release = edge(r, 1) * (hp * Math.exp(-r / 0.0004) * 0.12 + Math.sin(2 * Math.PI * 5200 * r) * Math.exp(-r / 0.0003) * 0.1);
-    return press + tock + release;
-  });
+  const tap = (tockHz: number, tockDecay: number, releaseAt: number) => {
+    let hp = 0;
+    let prev = 0;
+    return renderBuffer(ctx, 0.018, (t) => {
+      const n = rng() * 2 - 1;
+      hp = 0.6 * (hp + n - prev); // steeper high-pass → only the "snap" of the noise
+      prev = n;
+      const press = hp * Math.exp(-t / 0.0004) * 0.3 + Math.sin(2 * Math.PI * 4400 * t) * Math.exp(-t / 0.0004) * 0.2;
+      const tock = Math.sin(2 * Math.PI * tockHz * t) * Math.exp(-t / tockDecay) * 0.42;
+      const r = t - releaseAt;
+      const release = edge(r, 1) * (hp * Math.exp(-r / 0.0004) * 0.12 + Math.sin(2 * Math.PI * 5200 * r) * Math.exp(-r / 0.0003) * 0.1);
+      return press + tock + release;
+    });
+  };
+  const clicks = [tap(2400, 0.0018, 0.0035), tap(2250, 0.002, 0.0031), tap(2560, 0.0016, 0.0039), tap(2330, 0.0019, 0.0044)];
 
   // 3D: bassy plucks with a fast pitch drop + sub thump
   const sr = ctx.sampleRate;
@@ -73,5 +77,5 @@ export function renderBank(ctx: BaseAudioContext, rng: () => number): BufferBank
     return snap + ring + seat;
   });
 
-  return { click, latch, bass: [pluck(55), pluck(68), pluck(82)], noise, grain };
+  return { clicks, latch, bass: [pluck(55), pluck(68), pluck(82)], noise, grain };
 }

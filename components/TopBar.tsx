@@ -44,17 +44,32 @@ function SoundButton({ sound }: { sound: SoundControl | null }) {
   );
 }
 
+function Logo() {
+  return (
+    <>
+      <span className="t-display text-3xl leading-none" aria-hidden>
+        ✱
+      </span>
+      <span className="t-display text-lg leading-none">{site.initials}</span>
+      <span className="t-label hidden text-[9px] md:inline">/ {site.descriptor}</span>
+    </>
+  );
+}
+
 export function TopBar({ view, onTalk, onToggleView, sound, className = '' }: Props) {
   return (
     <header className={`z-20 bg-bg px-4 md:px-[14px] ${className}`}>
       <div className="t-rule-b flex h-[60px] items-center justify-between md:px-1">
-        <div className="flex items-center gap-3">
-          <span className="t-display text-3xl leading-none" aria-hidden>
-            ✱
-          </span>
-          <span className="t-display text-lg leading-none">{site.initials}</span>
-          <span className="t-label hidden text-[9px] md:inline">/ {site.descriptor}</span>
-        </div>
+        {view === 'plain' ? (
+          // plain view: the logo takes you back to the main (rail) screen
+          <button type="button" onClick={onToggleView} className="flex items-center gap-3 text-left" aria-label={`${site.initials} — back to the main screen`}>
+            <Logo />
+          </button>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Logo />
+          </div>
+        )}
         <p className="t-label hidden text-[10px] lg:block">{site.issue}</p>
         <div className="flex items-center gap-3 md:gap-5">
           <SoundButton sound={sound} />
