@@ -9,6 +9,8 @@ import { projectNumber, stationById } from '@/lib/content-index';
 import { pad } from '@/lib/rail/format';
 import { ModelIcon } from './ModelIcon';
 import { Visual } from './visuals';
+import { BioCard } from './BioCard';
+import { CvTicket } from './CvTicket';
 
 interface Props {
   station: Station;
@@ -168,6 +170,14 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
         </div>
       );
 
+    case 'bio':
+      return (
+        <div className="card-pad">
+          <CardHeader number={number} chapterTitle={chapterTitle} right={counter} />
+          <BioCard station={s} titleId={titleId} />
+        </div>
+      );
+
     case 'text':
       return (
         <div className="card-pad">
@@ -293,28 +303,29 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
       return (
         <div className="card-pad">
           <CardHeader number={number} chapterTitle={chapterTitle} right="+" />
-          <h3 id={titleId} className="t-display mt-6 text-[34px] leading-[1.02] md:text-5xl">
+          <h3 id={titleId} className="t-display mt-5 text-[34px] leading-[1.02] md:text-[44px]">
             {s.title}
           </h3>
           <p className="mt-4 font-body text-lg">{s.subtitle}</p>
-          <ul className="t-divide t-rule-y mt-6">
+          {s.cv && <CvTicket cv={s.cv} />}
+          <ul className="contact-links mt-4">
             {s.links.map((l) => (
               <li key={l.label}>
                 <a
                   href={l.href}
                   {...(l.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                  className="contact-row t-label grid grid-cols-[88px_1fr_auto] items-center gap-3 py-4 text-[11px] md:grid-cols-[120px_1fr_auto]"
+                  className="contact-row t-label"
                 >
-                  <span className="normal-case">{l.label}</span>
-                  <span className="truncate">{l.value}</span>
-                  <span aria-hidden className="text-base">
+                  <span className="contact-label normal-case">{l.label}</span>
+                  <span className="contact-value">{l.value}</span>
+                  <span aria-hidden className="contact-arrow">
                     ↗
                   </span>
                 </a>
               </li>
             ))}
           </ul>
-          <p className="t-label mt-6 text-[10px] font-bold">{s.footer}</p>
+          <p className="t-label mt-4 text-[10px] font-bold">{s.footer}</p>
         </div>
       );
   }

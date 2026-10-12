@@ -26,11 +26,13 @@ html {
 }
 /* no page scrollbar (scrolling itself is unchanged): the rail's HUD shows progress */
 html,
-.rail-scroller {
+.rail-scroller,
+.chapter-nav {
   scrollbar-width: none;
 }
 html::-webkit-scrollbar,
-.rail-scroller::-webkit-scrollbar {
+.rail-scroller::-webkit-scrollbar,
+.chapter-nav::-webkit-scrollbar {
   display: none;
 }
 body {
@@ -44,6 +46,121 @@ body {
 :focus-visible {
   outline: 3px solid var(--t-accent-text);
   outline-offset: 2px;
+}
+
+/* ───────────── Meet the maker: a three-mode identity card */
+.bio-card { margin-top: 20px; }
+.bio-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bio-heading h3 { font-size: clamp(30px, 5vw, 48px); line-height: 1.02; }
+.bio-hello { font-size: 48px; line-height: 1; color: var(--t-accent-text); rotate: -12deg; }
+.bio-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 24px; border: 2px solid var(--t-border); }
+.bio-mode {
+  display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px;
+  font-size: 11px; cursor: pointer; background: transparent; color: var(--t-fg);
+  transition: background 120ms, color 120ms;
+}
+.bio-mode + .bio-mode { border-left: 2px solid var(--t-border); }
+.bio-mode-index { font-size: 9px; opacity: 0.6; }
+.bio-mode-mark { margin-left: auto; font-size: 18px; line-height: 1; }
+.bio-mode[aria-pressed="true"] { background: var(--t-fg); color: var(--t-bg); }
+.bio-mode:hover { background: var(--t-accent-1); color: var(--t-on-accent-1); }
+.bio-mode:focus-visible { position: relative; z-index: 1; outline-offset: 4px; }
+.bio-panels { display: grid; margin-top: 18px; }
+.bio-panel {
+  grid-area: 1 / 1; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 18px 22px;
+  visibility: hidden; pointer-events: none;
+}
+.bio-panel[data-active] { visibility: visible; pointer-events: auto; }
+.bio-figure {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: var(--t-accent-1); color: var(--t-on-accent-1); padding: 8px 6px 12px;
+  border: 1px solid var(--t-border); align-self: stretch;
+}
+.bio-panel[data-mode="code"] .bio-figure { background: var(--t-accent-3); color: var(--t-on-accent-3); }
+.bio-panel[data-mode="human"] .bio-figure { background: var(--t-card-bg); color: var(--t-fg); }
+.bio-figure svg { width: 100%; max-width: 160px; }
+.bio-figure-caption { font-size: 8px; letter-spacing: 0; white-space: nowrap; }
+.bio-story { align-self: center; padding: 8px 0; }
+.bio-kicker { font-size: 9px; color: var(--t-muted); }
+.bio-headline { font-size: 32px; line-height: 1.04; margin-top: 12px; max-width: 12ch; }
+.bio-copy { margin-top: 12px; }
+.bio-footer { display: flex; justify-content: space-between; gap: 8px; margin-top: 18px; font-size: 9px; color: var(--t-muted); }
+.bio-footer > span:first-child { display: flex; align-items: center; gap: 6px; }
+.bio-status { width: 6px; height: 6px; background: var(--t-fg); }
+
+/* Final stop: a paper CV tucked into a perforated takeaway ticket. */
+.cv-ticket {
+  position: relative; display: grid; grid-template-columns: 76px minmax(0, 1fr) 40px; align-items: center;
+  gap: 18px; margin-top: 24px; padding: 18px 0 18px 18px;
+  background: var(--t-accent-1); color: var(--t-on-accent-1); border: 2px solid var(--t-border);
+  text-decoration: none;
+}
+.cv-paper {
+  position: relative; display: flex; flex-direction: column; gap: 9px; padding: 10px 8px;
+  background: var(--t-card-bg); color: var(--t-fg); border: 1.5px solid var(--t-border);
+  box-shadow: 3px 3px 0 var(--t-fg); rotate: -7deg;
+  transition: rotate 180ms, transform 180ms;
+}
+.cv-paper::after {
+  content: ''; position: absolute; top: -1.5px; right: -1.5px; width: 13px; height: 13px;
+  background: linear-gradient(45deg, var(--t-accent-1) 48%, var(--t-border) 49%, var(--t-border) 56%, var(--t-accent-1) 57%);
+  border-left: 1.5px solid var(--t-border); border-bottom: 1.5px solid var(--t-border);
+}
+.cv-paper-name { font-size: 5px; letter-spacing: 0; padding-right: 4px; }
+.cv-paper-title { display: flex; align-items: center; justify-content: space-between; font-size: 29px; line-height: 1; }
+.cv-paper-title > span { font-size: 18px; }
+.cv-paper-lines { display: flex; flex-direction: column; gap: 4px; }
+.cv-paper-lines i { display: block; height: 2px; background: currentColor; opacity: 0.3; }
+.cv-paper-lines i:last-child { width: 65%; }
+.cv-ticket-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.cv-eyebrow { font-size: 9px; }
+.cv-ticket-title { font-size: 25px; line-height: 1.04; }
+.cv-ticket-copy > .t-body-sm { font-size: 12px; }
+.cv-ticket-action { display: inline-block; margin-top: 5px; padding: 5px 8px; font-size: 10px; border: 1px solid currentColor; }
+a.cv-ticket .cv-ticket-action { background: var(--t-fg); color: var(--t-bg); }
+.cv-ticket-stub {
+  align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  border-left: 1px dashed currentColor; padding: 2px 0; font-size: 8px;
+}
+.cv-ticket-stub > span:first-child { writing-mode: vertical-rl; }
+.cv-ticket-stub > span:last-child { font-size: 22px; line-height: 1; }
+a.cv-ticket:is(:hover, :focus-visible) .cv-paper { rotate: 0deg; transform: translateY(-3px); }
+a.cv-ticket:hover .cv-ticket-action { background: var(--t-card-bg); color: var(--t-fg); }
+.contact-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--t-rule); }
+.contact-links > li { min-width: 0; border-bottom: 1px solid var(--t-rule); }
+.contact-links > li:nth-child(odd) { border-right: 1px solid var(--t-rule); }
+.contact-links .contact-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 8px; padding: 12px 10px; }
+.contact-label { font-size: 11px; }
+.contact-value { grid-column: 1; grid-row: 2; font-size: 9px; letter-spacing: 0; overflow-wrap: anywhere; }
+.contact-arrow { grid-column: 2; grid-row: 1 / 3; align-self: center; font-size: 20px; }
+
+@media (max-width: 479px) {
+  .bio-heading h3 { font-size: 30px; }
+  .bio-hello { font-size: 34px; }
+  .bio-mode { padding: 9px 6px; gap: 5px; font-size: 9px; min-height: 44px; }
+  .bio-mode-index { display: none; }
+  .bio-panel { grid-template-columns: 86px minmax(0, 1fr); gap: 14px 12px; }
+  .bio-figure { padding: 8px 3px; }
+  .bio-figure-caption { font-size: 6px; }
+  .bio-kicker { font-size: 8px; letter-spacing: 0; }
+  .bio-headline { font-size: 26px; margin-top: 8px; }
+  .bio-copy { font-size: 12px; line-height: 1.5; }
+  .bio-footer { font-size: 7px; letter-spacing: 0; }
+  .cv-ticket { grid-template-columns: 53px minmax(0, 1fr) 25px; gap: 10px; padding: 14px 0 14px 10px; }
+  .cv-paper { padding: 9px 5px; gap: 7px; }
+  .cv-paper-name { font-size: 4px; }
+  .cv-paper-title { font-size: 24px; }
+  .cv-paper-title > span { font-size: 14px; }
+  .cv-ticket-title { font-size: 22px; }
+  .cv-eyebrow { font-size: 8px; }
+  .cv-ticket-copy > .t-body-sm { font-size: 11px; }
+  .cv-ticket-action { font-size: 9px; padding: 4px 6px; }
+  .cv-ticket-stub { font-size: 7px; }
+  .contact-value { grid-column: 1 / -1; }
+  .contact-arrow { grid-row: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bio-mode, .cv-paper { transition: none; }
 }
 
 /* ───────────── token-driven building blocks (layered so Tailwind utilities can override) */

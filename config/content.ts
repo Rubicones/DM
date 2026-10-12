@@ -47,6 +47,17 @@ export interface TextStation extends StationBase {
   title: string;
   paragraphs: string[];
 }
+export interface BioStation extends StationBase {
+  kind: 'bio';
+  title: string;
+  subtitle: string;
+  facets: {
+    label: string;
+    visual: 'design' | 'code' | 'human';
+    headline: string;
+    text: string;
+  }[];
+}
 export interface ListStation extends StationBase {
   kind: 'list';
   title: string;
@@ -101,11 +112,17 @@ export interface ContactStation extends StationBase {
   subtitle: string;
   links: { label: string; value: string; href: string }[];
   footer: string;
+  cv?: {
+    name: string;
+    /** Set to a PDF in /public (e.g. /dmitriy-popov-cv.pdf) when ready. Null shows the stub. */
+    href: string | null;
+  };
 }
 
 export type Station =
   | IntroStation
   | TextStation
+  | BioStation
   | ListStation
   | ProjectStation
   | StackStation
@@ -353,13 +370,29 @@ export const chapters: Chapter[] = [
     stations: [
       {
         id: 'about-bio',
-        kind: 'text',
+        kind: 'bio',
         size: 'lg',
         title: "Hi, I'm Dmitriy.",
-        paragraphs: [
-          'A Web Engineer and Creative Frontend Developer. I build digital products where high-end visual design meets complex technical architecture.',
-          "As both the designer and developer of my projects, I don't just execute technical tasks. My process starts with deeply understanding your goals to find a visual language that reflects the core of your product.",
-          'I strive to "humanize" digital experiences – making them empathetic, intuitive, and tactile through an obsessive attention to small details and micro-interactions.',
+        subtitle: 'A Web Engineer and Creative Frontend Developer.',
+        facets: [
+          {
+            label: 'Designer',
+            visual: 'design',
+            headline: 'Understand your goals.',
+            text: 'My process starts with deeply understanding your goals to find a visual language that reflects the core of your product.',
+          },
+          {
+            label: 'Engineer',
+            visual: 'code',
+            headline: 'Design meets architecture.',
+            text: 'I build digital products where high-end visual design meets complex technical architecture.',
+          },
+          {
+            label: 'Human',
+            visual: 'human',
+            headline: 'Humanize digital experiences.',
+            text: 'I strive to "humanize" digital experiences – making them empathetic, intuitive, and tactile.',
+          },
         ],
       },
       {
@@ -639,9 +672,10 @@ export const chapters: Chapter[] = [
       {
         id: 'contact',
         kind: 'contact',
-        size: 'md',
+        size: 'lg',
         title: 'Let’s build something human.',
         subtitle: 'Good things start with a conversation.',
+        cv: { name: 'Dmitriy Popov', href: '/Dmitriy_Popov_Web_Engineer.pdf' },
         links: [
           { label: 'Email', value: 'rubiconhere@gmail.com', href: 'mailto:rubiconhere@gmail.com' },
           { label: 'GitHub', value: 'github.com/Rubicones', href: 'https://github.com/Rubicones' },

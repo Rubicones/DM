@@ -459,7 +459,8 @@ function* planRouteSteps(
     const all = [...newLegs, stationLeg];
     const t = last ? 1 : 0.5;
     const anchor = { x: lerp(stationLeg.a.x, stationLeg.b.x, t), y: lerp(stationLeg.a.y, stationLeg.b.y, t) };
-    const sides: CardSide[] = last ? ['below'] : horiz ? ['above', 'below'] : ['left', 'right'];
+    // A tall final card belongs beside the endpoint so it fits between the header and HUD.
+    const sides: CardSide[] = last && size.h <= W.tallCard ? ['below'] : horiz ? ['above', 'below'] : ['left', 'right'];
     if (rng() < 0.5) sides.reverse();
 
     const end = stationLeg.b;
@@ -949,6 +950,8 @@ export function stationTextLength(st: Station): number {
       return st.eyebrow.length + st.name.length + st.role.join(' ').length + st.tagline.length;
     case 'text':
       return st.title.length + st.paragraphs.join(' ').length;
+    case 'bio':
+      return st.title.length + st.subtitle.length + st.facets.reduce((a, f) => a + f.headline.length + f.text.length, 0);
     case 'list':
       return st.title.length + st.items.reduce((a, i) => a + i.title.length + i.text.length, 0);
     case 'project':

@@ -20,7 +20,7 @@ export const Hud = memo(function Hud({ engine, debug }: { engine: RailEngine; de
           </p>
           {debug}
         </div>
-        <nav aria-label="Chapters" className="-mx-2 flex overflow-x-auto py-2 md:mx-0 md:py-0">
+        <nav aria-label="Chapters" className="chapter-nav -mx-2 flex overflow-x-auto py-2 md:mx-0 md:py-0">
           {chapters.map((c) => (
             <button
               key={c.id}
