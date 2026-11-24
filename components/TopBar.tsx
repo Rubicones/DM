@@ -74,7 +74,7 @@ export function TopBar({ view, onTalk, onToggleView, sound, className = '' }: Pr
         <div className="flex items-center gap-3 md:gap-5">
           <SoundButton sound={sound} />
           <button type="button" onClick={onToggleView} className="link-toggle t-label hidden text-[10px] sm:inline">
-            {view === 'rail' ? 'Plain view' : 'Rail view'}
+            {view === 'rail' ? 'Fast overview' : 'Rail view'}
           </button>
           <button type="button" onClick={onTalk} className="btn t-label inline-flex items-center gap-2 px-3 py-2 text-[11px] font-bold">
             {site.cta} <span aria-hidden>↗</span>

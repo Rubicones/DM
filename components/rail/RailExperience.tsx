@@ -274,7 +274,7 @@ export function RailExperience({ onToggleView, initialMobile = false }: { onTogg
         Start journey <span aria-hidden>→</span>
       </button>
       <button type="button" className="journey-plain t-label" onClick={onToggleView} tabIndex={idle ? 0 : -1}>
-        Plain view (boring)
+        Fast overview
       </button>
     </div>
   );
@@ -391,8 +391,8 @@ export function RailExperience({ onToggleView, initialMobile = false }: { onTogg
                           className={`station absolute theme-${chapter.theme} ${p ? '' : 'unplaced'}`}
                           style={
                             {
-                              left: p?.rect.x ?? 0,
-                              top: p?.rect.y ?? 0,
+                              left: Math.round(p?.rect.x ?? 0),
+                              top: Math.round(p?.rect.y ?? 0),
                               '--seed': tiltSeed(e.number),
                               '--ciw': size ? `${size.w}px` : undefined,
                               '--cih': size ? `${size.h}px` : undefined,

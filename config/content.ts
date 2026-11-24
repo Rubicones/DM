@@ -119,7 +119,15 @@ export interface ContactStation extends StationBase {
   };
 }
 
+/** Commercial & team roles (company, role, period, one-line outcome). */
+export interface ExperienceStation extends StationBase {
+  kind: 'experience';
+  title: string;
+  items: { company: string; role: string; period: string; text: string }[];
+}
+
 export type Station =
+  | ExperienceStation
   | IntroStation
   | TextStation
   | BioStation
@@ -345,6 +353,28 @@ export const site = {
   posterMeta: ['21.10.26', 'rail_poster | chapter no. 04', 'generative surface', 'designed & engineered by dmitriy'],
 };
 
+/** Commercial & team roles — the "Commercial & Team Experience" station (end of Projects, rail + Fast overview). */
+export const experience: ExperienceStation['items'] = [
+  {
+    company: 'Toggle Concepts',
+    role: 'Fractional Tech Lead',
+    period: '2026 – Present',
+    text: 'Architected an AI ad-production workflow platform powered by Claude agents (hybrid local quota + cloud API) for a Berlin B2B creative service.',
+  },
+  {
+    company: 'Vortex Foundation',
+    role: 'Lead Frontend / UI Platform Engineer',
+    period: '2023 – 2026',
+    text: 'Led migration of the core internal dashboard to a unified Shadcn UI design system (Jest/Cypress, CI/CD) and grew public web views by +70%.',
+  },
+  {
+    company: 'mayk.it / covers.ai & NDA Superapp',
+    role: 'Contract',
+    period: '2024 – 2026',
+    text: 'Cut negative UX feedback from 30% to 8% (-73%), shipped AI audio-generation controls for paid subscriptions, and delivered core React/GraphQL MVP modules.',
+  },
+];
+
 export const chapters: Chapter[] = [
   {
     id: 'intro',
@@ -355,9 +385,9 @@ export const chapters: Chapter[] = [
         id: 'intro',
         kind: 'intro',
         size: 'lg',
-        eyebrow: 'Independent Web Engineer',
+        eyebrow: 'Design Systems, 0-to-1 SaaS & Applied AI',
         name: 'Dmitriy Popov',
-        role: ['Creative UI/UX &', 'High-Performance Frontend'],
+        role: ['Product & Design Engineer'],
         tagline: 'Human-centered design. Engineered to perform.',
         hint: 'Scroll to explore',
       },
@@ -373,7 +403,7 @@ export const chapters: Chapter[] = [
         kind: 'bio',
         size: 'lg',
         title: "Hi, I'm Dmitriy.",
-        subtitle: 'A Web Engineer and Creative Frontend Developer.',
+        subtitle: 'A Product & Design Engineer.',
         facets: [
           {
             label: 'Designer',
@@ -403,11 +433,11 @@ export const chapters: Chapter[] = [
         items: [
           {
             title: 'End-to-End Design & Development',
-            text: 'From UX research and Figma prototyping to pixel-perfect code implementation. I ensure the final product looks exactly as intended and feels alive.',
+            text: 'From UX architecture and design systems to production code. I bridge product design and frontend engineering so the shipped product feels fast, cohesive, and alive.',
           },
           {
             title: 'Empathetic & Accessible UI',
-            text: 'I am aware of a ton of AI-feeling interfaces and striving to humanize the design and UX. I have experience building neuro-inclusive, stress-free interfaces with optimized accessibility (A11y), ensuring your product is comfortable for every user.',
+            text: 'Most AI-generated interfaces feel generic and cluttered. I focus on humanizing UX with neuro-inclusive, calm layouts and strong accessibility (A11y) so products feel effortless to use.',
           },
           {
             title: 'Interactive 3D & Web Audio',
@@ -418,8 +448,8 @@ export const chapters: Chapter[] = [
             text: "Heavy visuals shouldn't mean slow websites. I use modern architectures like Astro (Partial Hydration / Islands) and Next.js to deliver 60FPS animations and Lighthouse 100 scores, even with heavy 3D assets and media grids.",
           },
           {
-            title: 'Complex Web Apps',
-            text: 'Beyond landing pages, I build robust architectures for SaaS and Web3 platforms (custom visual data trees, interactive timelines, dynamic dashboards).',
+            title: '0-to-1 Products & Applied AI',
+            text: 'Beyond landing pages, I build complete SaaS platforms, B2B e-commerce systems, internal dashboards, and applied AI workflows (Claude agents, LLM APIs with anti-hallucination guardrails).',
           },
         ],
       },
@@ -437,8 +467,8 @@ export const chapters: Chapter[] = [
         title: 'Vortex Foundation',
         type: 'High-Converting Web3 Corporate Platform',
         description:
-          'A premium B2B platform for a crypto market maker. Features scroll-animated chronological timelines, dynamic data counters for business metrics, and ergonomic verification forms.',
-        stack: ['Next.js', 'TypeScript', 'Tailwind CSS', 'Framer Motion', 'GSAP'],
+          'A B2B corporate platform for a crypto market maker, rebuilt from scratch with technical SEO and performance optimizations that grew landing page views by +70%. Features scroll-driven chronological timelines, live business metric counters, and verification flows.',
+        stack: ['Next.js', 'TypeScript', 'Tailwind CSS', 'Technical SEO'],
         link: { label: 'vortex.foundation', href: 'https://vortex.foundation' },
         color: '#91eb44',
         icon: '/projects/vortex.png',
@@ -455,6 +485,13 @@ export const chapters: Chapter[] = [
         link: { label: 'basicbakery.rs', href: 'https://basicbakery.rs' },
         color: '#e3735a',
         icon: '/projects/basic-bakery.png',
+      },
+      {
+        id: 'experience',
+        kind: 'experience',
+        size: 'lg',
+        title: 'Commercial & Team Experience',
+        items: experience,
       },
     ],
   },
@@ -533,10 +570,10 @@ export const chapters: Chapter[] = [
         kind: 'project',
         size: 'md',
         title: 'Sonicdesk',
-        type: 'Interactive Audio SaaS for Musicians',
+        type: '0-to-1 Audio SaaS & Applied AI Platform',
         description:
-          'An innovative "Git for music" workspace. Features a custom visual version-control tree, interactive audio mixer with visual diffs, and timeline-based comments tied to musical bars.',
-        stack: ['Next.js', 'Web Audio API', 'Tone.js', 'Motion', 'Supabase'],
+          'A solo-built "Git for music" workspace featured in the official GSAP Showcase. Includes a custom design system, branching/A-B audio version control, lossless FLAC server-side pipeline, 5-tier PLG pricing, and a $0/mo Gemini AI rehearsal room finder with anti-hallucination quote verification.',
+        stack: ['Next.js', 'TypeScript', 'Supabase', 'Web Audio API', 'GSAP', 'Gemini API'],
         link: { label: 'sonicdesk.studio', href: 'https://sonicdesk.studio' },
         color: '#dfff00',
         icon: '/projects/sonicdesk.svg',
@@ -584,7 +621,7 @@ export const chapters: Chapter[] = [
         skills: [
           { name: 'Accessible, neuro-inclusive UI', projects: ['project-alevtyna'] },
           { name: 'Astro Islands', projects: ['project-alevtyna'] },
-          { name: 'Framer Motion', projects: ['project-alevtyna', 'project-vortex'] },
+          { name: 'Framer Motion', projects: ['project-alevtyna'] },
         ],
       },
       {
@@ -613,10 +650,10 @@ export const chapters: Chapter[] = [
         size: 'md',
         title: 'Hard',
         groups: [
-          { label: 'Languages', items: ['JavaScript', 'TypeScript', 'HTML5', 'CSS3'] },
-          { label: 'Styling', items: ['Tailwind', 'SASS', 'CSS Modules'] },
-          { label: 'Frameworks', items: ['React', 'Next.js', 'Svelte'] },
-          { label: 'Data & CMS', items: ['RTK Query', 'React Query', 'Strapi'] },
+          { label: 'Languages', items: ['TypeScript', 'JavaScript'] },
+          { label: 'Styling & UI', items: ['Tailwind CSS', 'Shadcn UI', 'Design Systems', 'SASS'] },
+          { label: 'Frameworks', items: ['React', 'Next.js', 'Astro', 'Svelte'] },
+          { label: 'Backend & Data', items: ['Node.js', 'PostgreSQL / Supabase', 'GraphQL', 'React Query', 'RTK Query'] },
         ],
       },
       {
@@ -625,8 +662,8 @@ export const chapters: Chapter[] = [
         size: 'md',
         title: 'Creative',
         groups: [
-          { label: '3D & Motion', items: ['Three.js', 'Spline', 'Lottie'] },
-          { label: 'Audio', items: ['Tone.js', 'Resonance Audio', 'Web Audio API'] },
+          { label: '3D & Motion', items: ['GSAP', 'Framer Motion', 'Three.js / R3F', 'Spline', 'Lottie'] },
+          { label: 'Audio', items: ['Web Audio API', 'Tone.js', 'Resonance Audio'] },
         ],
       },
       {
@@ -635,9 +672,9 @@ export const chapters: Chapter[] = [
         size: 'md',
         title: 'Process',
         groups: [
-          { label: 'Testing', items: ['Jest', 'Cypress'] },
+          { label: 'Testing & CI', items: ['Jest', 'Cypress', 'CI/CD'] },
           { label: 'Tooling', items: ['ESLint', 'Prettier'] },
-          { label: 'AI', items: ['Claude Code', 'Claude Design', 'Cursor', 'Lovable'] },
+          { label: 'Applied AI', items: ['Claude Agents', 'Gemini / LLM APIs', 'Claude Code', 'Cursor'] },
         ],
       },
     ],
@@ -675,7 +712,7 @@ export const chapters: Chapter[] = [
         size: 'lg',
         title: 'Let’s build something human.',
         subtitle: 'Good things start with a conversation.',
-        cv: { name: 'Dmitriy Popov', href: '/Dmitriy_Popov_Web_Engineer.pdf' },
+        cv: { name: 'Dmitriy Popov', href: '/Dmitriy_Popov_Product_Design_Engineer.pdf' },
         links: [
           { label: 'Email', value: 'rubiconhere@gmail.com', href: 'mailto:rubiconhere@gmail.com' },
           { label: 'GitHub', value: 'github.com/Rubicones', href: 'https://github.com/Rubicones' },

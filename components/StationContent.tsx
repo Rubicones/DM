@@ -22,16 +22,15 @@ interface Props {
   idSuffix?: string;
   /** Intro only: shown in place of the scroll hint until the journey starts (rail view's "Start journey"). */
   introAction?: ReactNode;
-  /** Rail view: move the rider to a station (project chips). Plain view: chips are in-page anchors. */
+  /** Rail view: move the rider to a station (project chips). Fast overview: chips are in-page anchors. */
   onGoTo?: (id: string) => void;
 }
 
-function CardHeader({ number, chapterTitle, right }: { number: number; chapterTitle: string; right?: string }) {
+/** Card eyebrow: chapter name (+ "01 / 02" counter on the right). `number` is kept for callers; no "[07]" index shown. */
+function CardHeader({ chapterTitle, right }: { number: number; chapterTitle: string; right?: string }) {
   return (
     <div className="t-label flex items-center justify-between text-[10px] md:text-[11px]">
-      <span>
-        [{pad(number)}] {chapterTitle}
-      </span>
+      <span>{chapterTitle}</span>
       {right && <span aria-hidden>{right}</span>}
     </div>
   );
@@ -213,6 +212,29 @@ export function StationContent({ station: s, chapterTitle, number, local, idSuff
               </li>
             ))}
           </ol>
+        </div>
+      );
+
+    case 'experience':
+      return (
+        <div className="card-pad">
+          <CardHeader number={number} chapterTitle={chapterTitle} right={counter} />
+          <h3 id={titleId} className="t-display mt-5 text-3xl leading-none md:text-4xl">
+            {s.title}
+          </h3>
+          <ul className="t-divide t-rule-y mt-5">
+            {s.items.map((x) => (
+              <li key={x.company} className="py-2.5">
+                <p className="t-body font-bold leading-tight">
+                  {x.company}{' '}
+                  <span className="font-normal text-muted">
+                    ({x.role}, {x.period})
+                  </span>
+                </p>
+                <p className="t-body-sm mt-1 text-muted">{x.text}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       );
 

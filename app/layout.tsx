@@ -5,9 +5,9 @@ import { chapters } from '@/config/content';
 import { themeStylesheet } from '@/lib/theme/tokens';
 import './globals.css';
 
-const title = 'Dmitriy Popov — Web Engineer';
+const title = 'Dmitriy Popov – Product & Design Engineer';
 const description =
-  'Independent web engineer: creative UI/UX and high-performance frontend — interactive, 3D and audio-driven web products. Human-centered design. Engineered to perform.';
+  'Product & Design Engineer building high-craft web applications, design systems, 0-to-1 SaaS, and applied AI interfaces at 60fps and Lighthouse 100.';
 
 export const metadata: Metadata = {
   title,
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   applicationName: 'Dmitriy Popov',
   authors: [{ name: 'Dmitriy Popov', url: 'https://github.com/Rubicones' }],
   creator: 'Dmitriy Popov',
-  keywords: ['web engineer', 'frontend developer', 'creative developer', 'Next.js', 'TypeScript', 'React', 'Three.js', 'Web Audio', 'UI/UX', 'portfolio'],
+  keywords: ['product engineer', 'design engineer', 'design systems', 'SaaS', 'applied AI', 'Next.js', 'TypeScript', 'React', 'Three.js', 'Web Audio', 'UI/UX', 'portfolio'],
   openGraph: { type: 'website', title, description, siteName: 'Dmitriy Popov', locale: 'en_US' },
   twitter: { card: 'summary', title, description },
 };

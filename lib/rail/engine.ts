@@ -675,7 +675,12 @@ export class RailEngine {
       }
       this.wx = this.vw * L.camera.x - this.cam.x;
       this.wy = this.vh * L.camera.y - this.cam.y;
-      d.world.style.transform = `translate3d(${this.wx.toFixed(1)}px,${this.wy.toFixed(1)}px,0)`;
+      // snap to whole DEVICE pixels: the world is its own composited layer (cards, text, images);
+      // a fractional offset makes the compositor resample it → slightly blurry text
+      const dpr = window.devicePixelRatio || 1;
+      const sx = Math.round(this.wx * dpr) / dpr;
+      const sy = Math.round(this.wy * dpr) / dpr;
+      d.world.style.transform = `translate3d(${sx}px,${sy}px,0)`;
       if (d.texture) {
         const gs = TEXTURE_CELL;
         const gx = ((this.wx % gs) + gs) % gs;

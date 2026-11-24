@@ -48,4 +48,4 @@ npm run dev      # http://localhost:3000  (?view=plain forces the flat page)
 
 ## CV takeaway
 
-The final contact card downloads `public/Dmitriy_Popov_Web_Engineer.pdf` in both rail and plain views. Replace this file to update the CV; its URL is configured in `config/content.ts` under `cv.href`. Setting the URL to `null` restores the “PDF coming soon” stub.
+The final contact card downloads `public/Dmitriy_Popov_Product_Design_Engineer.pdf` in both rail and plain views. Replace this file to update the CV; its URL is configured in `config/content.ts` under `cv.href`. Setting the URL to `null` restores the “PDF coming soon” stub.

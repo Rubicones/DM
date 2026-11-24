@@ -14,7 +14,7 @@ import { DotSphereStatic } from './visuals';
  * Normal vertical page. Each chapter is a full-width section scoped to its own
  * theme (class `theme-<id>`), static: no rail animation, no WebGL — scene
  * chapters get a static SVG dotted sphere instead.
- * Used for prefers-reduced-motion, and via the "Plain view" toggle.
+ * Used for prefers-reduced-motion, and via the "Fast overview" toggle.
  */
 export function PlainPage({ onToggleView }: { onToggleView: () => void }) {
   // every chapter's theme is on this page → switch all theme fonts on

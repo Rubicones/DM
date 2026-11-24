@@ -280,7 +280,7 @@ export function MobileRail({ engine, geo, sound, onToggleView, introAction, onGo
                 {sound.on ? 'Sound on' : 'Sound off'}
               </button>
               <button type="button" onClick={onToggleView} className="link-toggle m-menu-chip t-label text-[11px]">
-                Plain view
+                Fast overview
               </button>
               <button
                 type="button"

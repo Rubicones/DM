@@ -954,6 +954,8 @@ export function stationTextLength(st: Station): number {
       return st.title.length + st.subtitle.length + st.facets.reduce((a, f) => a + f.headline.length + f.text.length, 0);
     case 'list':
       return st.title.length + st.items.reduce((a, i) => a + i.title.length + i.text.length, 0);
+    case 'experience':
+      return st.title.length + st.items.reduce((a, i) => a + i.company.length + i.role.length + i.period.length + i.text.length, 0);
     case 'project':
       return st.title.length + st.type.length + st.description.length + st.stack.join(' ').length;
     case 'stack':
